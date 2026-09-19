@@ -34,7 +34,6 @@ class StandEventosApp extends StatelessWidget {
 }
 
 
-// --- PANTALLA PRINCIPAL (VIS01 / VIS02 / Ingreso Manual) ---
 class PantallaPrincipal extends StatelessWidget {
   const PantallaPrincipal({super.key});
 
