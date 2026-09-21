@@ -212,9 +212,14 @@ class _PantallaAdminState extends State<PantallaAdmin> {
                           value: exp['activa'],
                           onChanged: (bool newValue) => _toggleActivacion(exp['id_experiencia'], newValue),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.settings, color: Colors.cyan),
-                          onPressed: () => _mostrarModalFormulario(experienciaAEditar: exp), 
+                        const SizedBox(width: 8), // Separador visual
+                        TextButton(
+                          onPressed: () => _mostrarModalFormulario(experienciaAEditar: exp),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.cyan,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          ),
+                          child: const Text('EDITAR', style: TextStyle(fontWeight: FontWeight.bold)),
                         ),
                       ],
                     ),
