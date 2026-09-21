@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'pantalla_mision.dart';
+import 'pantalla_admin.dart';
 
 
 class PantallaPrincipal extends StatelessWidget {
@@ -18,6 +19,7 @@ class PantallaPrincipal extends StatelessWidget {
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
+                if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Error: Código QR inválido o stand inactivo.'),
@@ -31,6 +33,7 @@ class PantallaPrincipal extends StatelessWidget {
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
+                if (!context.mounted) return;
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const PantallaMision()),
@@ -72,6 +75,7 @@ class PantallaPrincipal extends StatelessWidget {
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
+                if (!context.mounted) return;
                 // Validamos un código de prueba (ALPHA-01)
                 if (codigoController.text.trim().toUpperCase() == 'ALPHA-01') {
                   Navigator.push(
@@ -99,6 +103,16 @@ class PantallaPrincipal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.admin_panel_settings, color: Colors.white24),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const PantallaAdmin())),
+          )
+        ],
+      ),
       body: Center(
         child: SingleChildScrollView(
           child: Column(
