@@ -22,7 +22,6 @@ class _PantallaAdminState extends State<PantallaAdmin> {
 
   Future<void> _cargarExperiencias() async {
     try {
-      // Hacemos el select a la tabla correcta
       final data = await supabase.from('experiencia').select().order('nombre');
       setState(() {
         _experiencias = data;
@@ -34,72 +33,118 @@ class _PantallaAdminState extends State<PantallaAdmin> {
     }
   }
 
-void _mostrarModalCreacion() {
-    final nombreCtrl = TextEditingController();
-    final descCtrl = TextEditingController();
-    final tiempoCtrl = TextEditingController();
-    final recompensaCtrl = TextEditingController();
-    bool experienciaActiva = true;
+  // MODIFICACIÓN: Ahora recibe parámetros opcionales para saber si es edición
+  void _mostrarModalFormulario({Map<String, dynamic>? experienciaAEditar}) {
+    final formKey = GlobalKey<FormState>();
+    final bool esEdicion = experienciaAEditar != null;
+
+    // Autocompletamos si estamos editando
+    final nombreCtrl = TextEditingController(text: esEdicion ? experienciaAEditar['nombre'] : '');
+    final descCtrl = TextEditingController(text: esEdicion ? experienciaAEditar['descripcion'] : '');
+    final tiempoCtrl = TextEditingController(text: esEdicion ? experienciaAEditar['tiempo_limite_minutos'].toString() : '');
+    final recompensaCtrl = TextEditingController(text: esEdicion ? (experienciaAEditar['mensaje_recompensa_final'] ?? '') : '');
+    bool experienciaActiva = esEdicion ? experienciaAEditar['activa'] : true;
 
     showDialog(
-      context: context, // Este es el context principal de la pantalla
-      builder: (dialogContext) { // RENOMBRADO para no pisar el original
+      context: context,
+      builder: (dialogContext) {
         return StatefulBuilder(
           builder: (builderContext, setStateModal) {
             return AlertDialog(
               backgroundColor: const Color(0xFF1A1A1A),
-              title: const Text('Nueva Experiencia', style: TextStyle(color: Colors.cyan)),
+              // Cambia el título dinámicamente
+              title: Text(esEdicion ? 'Editar Experiencia' : 'Nueva Experiencia', style: const TextStyle(color: Colors.cyan)),
               content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(controller: nombreCtrl, decoration: const InputDecoration(labelText: 'Nombre (Ej: Operación Núcleo)', labelStyle: TextStyle(color: Colors.grey))),
-                    TextField(controller: descCtrl, decoration: const InputDecoration(labelText: 'Descripción / Instrucciones', labelStyle: TextStyle(color: Colors.grey))),
-                    TextField(controller: tiempoCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Tiempo límite (Minutos)', labelStyle: TextStyle(color: Colors.grey))),
-                    TextField(controller: recompensaCtrl, decoration: const InputDecoration(labelText: 'Mensaje recompensa final', labelStyle: TextStyle(color: Colors.grey))),
-                    const SizedBox(height: 15),
-                    SwitchListTile(
-                      title: const Text('Experiencia Activa', style: TextStyle(color: Colors.white)),
-                      activeThumbColor: Colors.cyan, // AVISO 1 SOLUCIONADO
-                      value: experienciaActiva,
-                      onChanged: (val) => setStateModal(() => experienciaActiva = val),
-                    ),
-                  ],
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextFormField(
+                        controller: nombreCtrl,
+                        decoration: const InputDecoration(labelText: 'Nombre (Ej: Operación Núcleo)', labelStyle: TextStyle(color: Colors.grey)),
+                        style: const TextStyle(color: Colors.white),
+                        validator: (value) => value == null || value.trim().isEmpty ? 'El nombre es obligatorio' : null,
+                      ),
+                      TextFormField(
+                        controller: descCtrl,
+                        decoration: const InputDecoration(labelText: 'Descripción / Instrucciones', labelStyle: TextStyle(color: Colors.grey)),
+                        style: const TextStyle(color: Colors.white),
+                        validator: (value) => value == null || value.trim().isEmpty ? 'La descripción es obligatoria' : null,
+                      ),
+                      TextFormField(
+                        controller: tiempoCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(labelText: 'Tiempo límite (Minutos)', labelStyle: TextStyle(color: Colors.grey)),
+                        style: const TextStyle(color: Colors.white),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) return 'El tiempo es obligatorio';
+                          if (int.tryParse(value) == null) return 'Debe ingresar un número válido';
+                          return null;
+                        },
+                      ),
+                      TextFormField(
+                        controller: recompensaCtrl,
+                        decoration: const InputDecoration(labelText: 'Mensaje recompensa final', labelStyle: TextStyle(color: Colors.grey)),
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      const SizedBox(height: 15),
+                      SwitchListTile(
+                        title: const Text('Experiencia Activa', style: TextStyle(color: Colors.white)),
+                        activeThumbColor: Colors.cyan,
+                        value: experienciaActiva,
+                        onChanged: (val) => setStateModal(() => experienciaActiva = val),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(dialogContext), // Usamos el context del modal
+                  onPressed: () => Navigator.pop(dialogContext),
                   child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
                 ),
                 ElevatedButton(
                   onPressed: () async {
-                    Navigator.pop(dialogContext); // Cerramos el modal primero
+                    if (!formKey.currentState!.validate()) return;
+
+                    Navigator.pop(dialogContext);
                     setState(() => _isLoading = true);
                     
                     try {
-                      final stand = await supabase.from('stand').select('id_stand').limit(1).single();
-
-                      await supabase.from('experiencia').insert({
-                        'id_stand': stand['id_stand'],
-                        'nombre': nombreCtrl.text,
-                        'descripcion': descCtrl.text,
-                        'tiempo_limite_minutos': int.tryParse(tiempoCtrl.text) ?? 15,
-                        'mensaje_recompensa_final': recompensaCtrl.text,
+                      // Preparamos el objeto con los datos validados
+                      final datos = {
+                        'nombre': nombreCtrl.text.trim(),
+                        'descripcion': descCtrl.text.trim(),
+                        'tiempo_limite_minutos': int.parse(tiempoCtrl.text.trim()),
+                        'mensaje_recompensa_final': recompensaCtrl.text.trim(),
                         'activa': experienciaActiva,
-                      });
+                      };
+
+                      if (esEdicion) {
+                        // Flujo UPDATE
+                        await supabase
+                            .from('experiencia')
+                            .update(datos)
+                            .eq('id_experiencia', experienciaAEditar['id_experiencia']);
+                      } else {
+                        // Flujo INSERT
+                        final stand = await supabase.from('stand').select('id_stand').limit(1).single();
+                        datos['id_stand'] = stand['id_stand']; // Agregamos la FK
+                        await supabase.from('experiencia').insert(datos);
+                      }
                       
                       await _cargarExperiencias(); 
                     } catch (e) {
-                      if (!mounted) return; // AVISO 2 SOLUCIONADO: Ahora evalúa correctamente el State principal
+                      if (!mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error al crear: $e', style: const TextStyle(color: Colors.white)), backgroundColor: Colors.red)
+                        SnackBar(content: Text('Error al guardar: $e', style: const TextStyle(color: Colors.white)), backgroundColor: Colors.red)
                       );
                       setState(() => _isLoading = false);
                     }
                   },
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.cyan, foregroundColor: Colors.black),
-                  child: const Text('Guardar'),
+                  child: Text(esEdicion ? 'Actualizar' : 'Guardar'),
                 ),
               ],
             );
@@ -118,7 +163,7 @@ void _mostrarModalCreacion() {
         elevation: 0,
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _mostrarModalCreacion,
+        onPressed: () => _mostrarModalFormulario(), // Sin parámetros = Crear
         backgroundColor: Colors.cyan,
         foregroundColor: Colors.black,
         icon: const Icon(Icons.add),
@@ -137,9 +182,13 @@ void _mostrarModalCreacion() {
                   color: const Color(0xFF1A1A1A),
                   shape: RoundedRectangleBorder(side: const BorderSide(color: Colors.white24), borderRadius: BorderRadius.circular(8)),
                   child: ListTile(
-                    title: Text(exp['nombre'], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)), // Ajustado al campo 'nombre'
-                    subtitle: Text('Tiempo: ${exp['tiempo_limite_minutos']} min | Activa: ${exp['activa'] ? "Sí" : "No"}', style: const TextStyle(color: Colors.grey)), // Ajustado a 'tiempo_limite_minutos'
-                    trailing: const Icon(Icons.settings, color: Colors.cyan),
+                    title: Text(exp['nombre'], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    subtitle: Text('Tiempo: ${exp['tiempo_limite_minutos']} min | Activa: ${exp['activa'] ? "Sí" : "No"}', style: const TextStyle(color: Colors.grey)),
+                    // MODIFICACIÓN: El ícono ahora es un botón que abre el modal pasando los datos
+                    trailing: IconButton(
+                      icon: const Icon(Icons.settings, color: Colors.cyan),
+                      onPressed: () => _mostrarModalFormulario(experienciaAEditar: exp), // Con parámetros = Editar
+                    ),
                   ),
                 );
               },
