@@ -33,6 +33,24 @@ class _PantallaAdminState extends State<PantallaAdmin> {
     }
   }
 
+  Future<void> _toggleActivacion(String idExperiencia, bool nuevoEstado) async {
+    try {
+      // Actualizamos solo el campo 'activa' en la base de datos
+      await supabase
+          .from('experiencia')
+          .update({'activa': nuevoEstado})
+          .eq('id_experiencia', idExperiencia);
+          
+      // Refrescamos la lista para reflejar el cambio en la interfaz
+      await _cargarExperiencias();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al cambiar estado: $e', style: const TextStyle(color: Colors.white)), backgroundColor: Colors.red)
+      );
+    }
+  }
+
   // MODIFICACIÓN: Ahora recibe parámetros opcionales para saber si es edición
   void _mostrarModalFormulario({Map<String, dynamic>? experienciaAEditar}) {
     final formKey = GlobalKey<FormState>();
@@ -185,9 +203,20 @@ class _PantallaAdminState extends State<PantallaAdmin> {
                     title: Text(exp['nombre'], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                     subtitle: Text('Tiempo: ${exp['tiempo_limite_minutos']} min | Activa: ${exp['activa'] ? "Sí" : "No"}', style: const TextStyle(color: Colors.grey)),
                     // MODIFICACIÓN: El ícono ahora es un botón que abre el modal pasando los datos
-                    trailing: IconButton(
-                      icon: const Icon(Icons.settings, color: Colors.cyan),
-                      onPressed: () => _mostrarModalFormulario(experienciaAEditar: exp), // Con parámetros = Editar
+                   // ADM03: Control rápido junto a cada experiencia listada
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Switch(
+                          activeThumbColor: Colors.cyan,
+                          value: exp['activa'],
+                          onChanged: (bool newValue) => _toggleActivacion(exp['id_experiencia'], newValue),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.settings, color: Colors.cyan),
+                          onPressed: () => _mostrarModalFormulario(experienciaAEditar: exp), 
+                        ),
+                      ],
                     ),
                   ),
                 );
