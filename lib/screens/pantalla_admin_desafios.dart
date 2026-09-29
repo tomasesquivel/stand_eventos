@@ -76,8 +76,8 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                         style: const TextStyle(color: Colors.white),
                         decoration: const InputDecoration(labelText: 'Tipo de desafío', labelStyle: TextStyle(color: Colors.grey)),
                         items: const [
-                          DropdownMenuItem(value: 'texto', child: Text('Texto / Contraseña')),
-                          DropdownMenuItem(value: 'qr', child: Text('Escanear QR Físico')),
+                          DropdownMenuItem(value: 'texto', child: Text('Ingreso de Palabra Clave')),
+                          DropdownMenuItem(value: 'qr', child: Text('Escanear QR')),
                         ],
                         onChanged: (val) => setStateModal(() => tipoSeleccionado = val!),
                       ),
