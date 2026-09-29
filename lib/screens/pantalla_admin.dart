@@ -91,14 +91,22 @@ class _PantallaAdminState extends State<PantallaAdmin> {
                         style: const TextStyle(color: Colors.white),
                         validator: (value) => value == null || value.trim().isEmpty ? 'La descripción es obligatoria' : null,
                       ),
+
                       TextFormField(
                         controller: tiempoCtrl,
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: 'Tiempo límite (Minutos)', labelStyle: TextStyle(color: Colors.grey)),
+                        decoration: const InputDecoration(
+                          labelText: 'Tiempo límite (Minutos, de 3 a 7)', 
+                          labelStyle: TextStyle(color: Colors.grey)
+                        ),
                         style: const TextStyle(color: Colors.white),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) return 'El tiempo es obligatorio';
-                          if (int.tryParse(value) == null) return 'Debe ingresar un número válido';
+                          
+                          final numero = int.tryParse(value);
+                          if (numero == null) return 'Debe ingresar un número válido';
+                          if (numero < 3 || numero > 7) return 'El tiempo debe estar entre 3 y 7 minutos';
+                          
                           return null;
                         },
                       ),
