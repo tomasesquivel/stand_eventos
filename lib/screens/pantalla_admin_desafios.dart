@@ -39,13 +39,14 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
     }
   }
 
-  // Criterio 1: Modal con formulario para cargar el acertijo
+
   void _mostrarModalDesafio() {
     final formKey = GlobalKey<FormState>();
     final ordenCtrl = TextEditingController(text: (_desafios.length + 1).toString());
     final respuestaCtrl = TextEditingController();
     final puntosCtrl = TextEditingController(text: '100');
-    String tipoSeleccionado = 'texto'; // Por defecto, según modelo BD
+    final pistaCtrl = TextEditingController(); 
+    String tipoSeleccionado = 'texto';
 
     showDialog(
       context: context,
@@ -61,7 +62,6 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Criterio 2: Validaciones de campos obligatorios
                       TextFormField(
                         controller: ordenCtrl,
                         keyboardType: TextInputType.number,
@@ -77,13 +77,13 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                         decoration: const InputDecoration(labelText: 'Tipo de desafío', labelStyle: TextStyle(color: Colors.grey)),
                         items: const [
                           DropdownMenuItem(value: 'texto', child: Text('Ingreso de Palabra Clave')),
-                          DropdownMenuItem(value: 'qr', child: Text('Escanear QR')),
+                          DropdownMenuItem(value: 'qr', child: Text('Escaneo QR')),
                         ],
                         onChanged: (val) => setStateModal(() => tipoSeleccionado = val!),
                       ),
                       TextFormField(
                         controller: respuestaCtrl,
-                        decoration: const InputDecoration(labelText: 'Respuesta correcta / ID del QR', labelStyle: TextStyle(color: Colors.grey)),
+                        decoration: const InputDecoration(labelText: 'Respuesta correcta / ID QR', labelStyle: TextStyle(color: Colors.grey)),
                         style: const TextStyle(color: Colors.white),
                         validator: (value) => value == null || value.trim().isEmpty ? 'La respuesta es obligatoria' : null,
                       ),
@@ -93,6 +93,19 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                         decoration: const InputDecoration(labelText: 'Puntos otorgados', labelStyle: TextStyle(color: Colors.grey)),
                         style: const TextStyle(color: Colors.white),
                         validator: (value) => value == null || value.trim().isEmpty ? 'Requerido' : null,
+                      ),
+                      const Divider(color: Colors.white24, height: 30),
+                      // ADM10: Campo específico para la pista
+                      TextFormField(
+                        controller: pistaCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Pista / Ayuda (Opcional)', 
+                          labelStyle: TextStyle(color: Colors.cyan),
+                          hintText: 'Ej: Busca debajo de la mesa',
+                          hintStyle: TextStyle(color: Colors.white38)
+                        ),
+                        style: const TextStyle(color: Colors.white),
+                        maxLines: 2,
                       ),
                     ],
                   ),
@@ -105,20 +118,28 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                 ),
                 ElevatedButton(
                   onPressed: () async {
-                    // Criterio 2: Impide guardar si falta información
                     if (!formKey.currentState!.validate()) return;
 
                     Navigator.pop(dialogContext);
                     setState(() => _isLoading = true);
                     
                     try {
-                      await supabase.from('desafio').insert({
+
+                      final nuevoDesafio = await supabase.from('desafio').insert({
                         'id_experiencia': widget.experiencia['id_experiencia'],
                         'orden_resolucion': int.parse(ordenCtrl.text),
                         'tipo': tipoSeleccionado,
                         'respuesta_correcta': respuestaCtrl.text.trim(),
                         'puntos_otorgados': int.parse(puntosCtrl.text),
-                      });
+                      }).select().single();
+                      
+
+                      if (pistaCtrl.text.trim().isNotEmpty) {
+                        await supabase.from('pista').insert({
+                          'id_desafio': nuevoDesafio['id_desafio'], 
+                          'texto_ayuda': pistaCtrl.text.trim(),
+                        });
+                      }
                       
                       await _cargarDesafios(); 
                     } catch (e) {
@@ -147,7 +168,7 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.amberAccent),
       ),
-      // Criterio 1: Botón visible para cargar el desafío
+
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _mostrarModalDesafio,
         backgroundColor: Colors.amberAccent,
@@ -159,7 +180,7 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
         ? const Center(child: CircularProgressIndicator(color: Colors.amberAccent))
         : _desafios.isEmpty
           ? const Center(child: Text('No hay desafíos configurados aún.', style: TextStyle(color: Colors.grey)))
-          // Criterio 3: Listado dentro de la configuración
+
           : ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: _desafios.length,
