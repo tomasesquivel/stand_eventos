@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'pantalla_admin_desafios.dart';
 
 class PantallaAdmin extends StatefulWidget {
   const PantallaAdmin({super.key});
@@ -220,6 +221,15 @@ class _PantallaAdminState extends State<PantallaAdmin> {
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           ),
                           child: const Text('EDITAR', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ),
+                        TextButton( 
+                          onPressed: () {
+                            Navigator.push(context, MaterialPageRoute(
+                              builder: (context) => PantallaAdminDesafios(experiencia: exp),
+                            ));
+                          },
+                          style: TextButton.styleFrom(foregroundColor: Colors.amberAccent),
+                          child: const Text('DESAFÍOS', style: TextStyle(fontWeight: FontWeight.bold)),
                         ),
                       ],
                     ),
