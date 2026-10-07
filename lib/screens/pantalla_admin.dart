@@ -239,41 +239,70 @@ class _PantallaAdminState extends State<PantallaAdmin> {
                 final exp = _experiencias[index];
                 return Card(
                   color: const Color(0xFF1A1A1A),
-                  shape: RoundedRectangleBorder(side: const BorderSide(color: Colors.white24), borderRadius: BorderRadius.circular(8)),
-                  child: ListTile(
-                    title: Text(exp['nombre'], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    subtitle: Text('Tiempo: ${exp['tiempo_limite_minutos']} min | Activa: ${exp['activa'] ? "Sí" : "No"}', style: const TextStyle(color: Colors.grey)),
-                    // MODIFICACIÓN: El ícono ahora es un botón que abre el modal pasando los datos
-                   // ADM03: Control rápido junto a cada experiencia listada
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
+                  shape: RoundedRectangleBorder(
+                    side: const BorderSide(color: Colors.cyan, width: 0.5), 
+                    borderRadius: BorderRadius.circular(8)
+                  ),
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Switch(
-                          activeThumbColor: Colors.cyan,
-                          value: exp['activa'],
-                          onChanged: (bool newValue) => _toggleActivacion(exp['id_experiencia'], newValue),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    exp['nombre'].toString().toUpperCase(),
+                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Tiempo: ${exp['tiempo_limite_minutos']} min | Activa: ${exp['activa'] ? 'Sí' : 'No'}',
+                                    style: const TextStyle(color: Colors.grey),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Switch(
+                              activeThumbColor: Colors.cyan,
+                              value: exp['activa'],
+                              onChanged: (bool newValue) => _toggleActivacion(exp['id_experiencia'], newValue),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 8), // Separador visual
-                        TextButton(
-                          onPressed: () => _mostrarModalFormulario(experienciaAEditar: exp),
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.cyan,
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        const Divider(color: Colors.white24, height: 20),
+                        SizedBox(
+                          width: double.infinity,
+                          child: Wrap(
+                            alignment: WrapAlignment.end,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 4,
+                            children: [
+                              TextButton(
+                                onPressed: () => _mostrarModalFormulario(experienciaAEditar: exp),
+                                style: TextButton.styleFrom(foregroundColor: Colors.cyan),
+                                child: const Text('EDITAR', style: TextStyle(fontWeight: FontWeight.bold)),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.push(context, MaterialPageRoute(
+                                    builder: (context) => PantallaAdminDesafios(experiencia: exp),
+                                  ));
+                                },
+                                style: TextButton.styleFrom(foregroundColor: Colors.amberAccent),
+                                child: const Text('DESAFÍOS', style: TextStyle(fontWeight: FontWeight.bold)),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                                onPressed: () => _eliminarExperiencia(exp['id_experiencia']),
+                              ),
+                            ],
                           ),
-                          child: const Text('EDITAR', style: TextStyle(fontWeight: FontWeight.bold)),
-                        ),
-                        TextButton( 
-                          onPressed: () {
-                            Navigator.push(context, MaterialPageRoute(
-                              builder: (context) => PantallaAdminDesafios(experiencia: exp),
-                            ));
-                          },
-                          style: TextButton.styleFrom(foregroundColor: Colors.amberAccent),
-                          child: const Text('DESAFÍOS', style: TextStyle(fontWeight: FontWeight.bold)),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                          onPressed: () => _eliminarExperiencia(exp['id_experiencia']),
                         ),
                       ],
                     ),
