@@ -82,7 +82,7 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                       ),
                       const SizedBox(height: 10),
                       DropdownButtonFormField<String>(
-                        value: tipoSeleccionado,
+                        initialValue: tipoSeleccionado,
                         dropdownColor: const Color(0xFF1A1A1A),
                         style: const TextStyle(color: Colors.white),
                         decoration: const InputDecoration(labelText: 'Tipo de desafío', labelStyle: TextStyle(color: Colors.grey)),
