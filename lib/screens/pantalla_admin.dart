@@ -181,6 +181,38 @@ class _PantallaAdminState extends State<PantallaAdmin> {
     );
   }
 
+  Future<void> _eliminarExperiencia(String idExperiencia) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: const Text('¿Eliminar Experiencia?', style: TextStyle(color: Colors.redAccent)),
+        content: const Text('Esto borrará la experiencia, todos sus desafíos y todas sus pistas. Esta acción es irreversible.', style: TextStyle(color: Colors.white)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar', style: TextStyle(color: Colors.grey))),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Eliminar Todo'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    setState(() => _isLoading = true);
+    try {
+      // Postgres se encarga de borrar las tablas hijas automáticamente
+      await supabase.from('experiencia').delete().eq('id_experiencia', idExperiencia);
+      await _cargarExperiencias();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+      setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -238,6 +270,10 @@ class _PantallaAdminState extends State<PantallaAdmin> {
                           },
                           style: TextButton.styleFrom(foregroundColor: Colors.amberAccent),
                           child: const Text('DESAFÍOS', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                          onPressed: () => _eliminarExperiencia(exp['id_experiencia']),
                         ),
                       ],
                     ),

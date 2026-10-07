@@ -25,7 +25,7 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
     try {
       final data = await supabase
           .from('desafio')
-          .select()
+          .select('*, pista(*)')
           .eq('id_experiencia', widget.experiencia['id_experiencia'])
           .order('orden_resolucion', ascending: true);
           
@@ -40,13 +40,24 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
   }
 
 
-  void _mostrarModalDesafio() {
+// Soporte para Creación y Edición de Desafío + Pista
+  void _mostrarModalDesafio({Map<String, dynamic>? desafioAEditar}) {
     final formKey = GlobalKey<FormState>();
-    final ordenCtrl = TextEditingController(text: (_desafios.length + 1).toString());
-    final respuestaCtrl = TextEditingController();
-    final puntosCtrl = TextEditingController(text: '100');
-    final pistaCtrl = TextEditingController(); 
-    String tipoSeleccionado = 'texto';
+    final bool esEdicion = desafioAEditar != null;
+
+    final ordenCtrl = TextEditingController(text: esEdicion ? desafioAEditar['orden_resolucion'].toString() : (_desafios.length + 1).toString());
+    final respuestaCtrl = TextEditingController(text: esEdicion ? desafioAEditar['respuesta_correcta'] : '');
+    final puntosCtrl = TextEditingController(text: esEdicion ? desafioAEditar['puntos_otorgados'].toString() : '100');
+    
+    // Lógica para pre-cargar la pista si existe
+    String pistaExistenteText = '';
+    String? idPistaExistente;
+    if (esEdicion && desafioAEditar['pista'] != null && (desafioAEditar['pista'] as List).isNotEmpty) {
+      pistaExistenteText = (desafioAEditar['pista'] as List)[0]['texto_ayuda'];
+      idPistaExistente = (desafioAEditar['pista'] as List)[0]['id_pista'];
+    }
+    final pistaCtrl = TextEditingController(text: pistaExistenteText);
+    String tipoSeleccionado = esEdicion ? desafioAEditar['tipo'] : 'texto';
 
     showDialog(
       context: context,
@@ -55,7 +66,7 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
           builder: (builderContext, setStateModal) {
             return AlertDialog(
               backgroundColor: const Color(0xFF1A1A1A),
-              title: const Text('Nuevo Desafío', style: TextStyle(color: Colors.amberAccent)),
+              title: Text(esEdicion ? 'Editar Desafío' : 'Nuevo Desafío', style: const TextStyle(color: Colors.amberAccent)),
               content: SingleChildScrollView(
                 child: Form(
                   key: formKey,
@@ -71,7 +82,7 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                       ),
                       const SizedBox(height: 10),
                       DropdownButtonFormField<String>(
-                        initialValue: tipoSeleccionado,
+                        value: tipoSeleccionado,
                         dropdownColor: const Color(0xFF1A1A1A),
                         style: const TextStyle(color: Colors.white),
                         decoration: const InputDecoration(labelText: 'Tipo de desafío', labelStyle: TextStyle(color: Colors.grey)),
@@ -95,7 +106,6 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                         validator: (value) => value == null || value.trim().isEmpty ? 'Requerido' : null,
                       ),
                       const Divider(color: Colors.white24, height: 30),
-                      // ADM10: Campo específico para la pista
                       TextFormField(
                         controller: pistaCtrl,
                         decoration: const InputDecoration(
@@ -124,21 +134,36 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                     setState(() => _isLoading = true);
                     
                     try {
-
-                      final nuevoDesafio = await supabase.from('desafio').insert({
-                        'id_experiencia': widget.experiencia['id_experiencia'],
+                      final datosDesafio = {
                         'orden_resolucion': int.parse(ordenCtrl.text),
                         'tipo': tipoSeleccionado,
                         'respuesta_correcta': respuestaCtrl.text.trim(),
                         'puntos_otorgados': int.parse(puntosCtrl.text),
-                      }).select().single();
-                      
+                      };
 
-                      if (pistaCtrl.text.trim().isNotEmpty) {
-                        await supabase.from('pista').insert({
-                          'id_desafio': nuevoDesafio['id_desafio'], 
-                          'texto_ayuda': pistaCtrl.text.trim(),
-                        });
+                      if (esEdicion) {
+                        // 1. Actualizar el Desafío
+                        await supabase.from('desafio').update(datosDesafio).eq('id_desafio', desafioAEditar['id_desafio']);
+                        
+                        // 2. Gestionar la Pista
+                        final textoPista = pistaCtrl.text.trim();
+                        if (textoPista.isNotEmpty) {
+                          if (idPistaExistente != null) {
+                            await supabase.from('pista').update({'texto_ayuda': textoPista}).eq('id_pista', idPistaExistente); // Modifica
+                          } else {
+                            await supabase.from('pista').insert({'id_desafio': desafioAEditar['id_desafio'], 'texto_ayuda': textoPista}); // Agrega
+                          }
+                        } else if (idPistaExistente != null) {
+                          await supabase.from('pista').delete().eq('id_pista', idPistaExistente); // Borra si la dejaron vacía
+                        }
+                      } else {
+                        // Flujo de Inserción
+                        datosDesafio['id_experiencia'] = widget.experiencia['id_experiencia'];
+                        final nuevo = await supabase.from('desafio').insert(datosDesafio).select().single();
+                        
+                        if (pistaCtrl.text.trim().isNotEmpty) {
+                          await supabase.from('pista').insert({'id_desafio': nuevo['id_desafio'], 'texto_ayuda': pistaCtrl.text.trim()});
+                        }
                       }
                       
                       await _cargarDesafios(); 
@@ -149,7 +174,7 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                     }
                   },
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.amberAccent, foregroundColor: Colors.black),
-                  child: const Text('Guardar Desafío'),
+                  child: Text(esEdicion ? 'Actualizar' : 'Guardar'),
                 ),
               ],
             );
@@ -192,11 +217,88 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                   child: ListTile(
                     leading: CircleAvatar(backgroundColor: Colors.amberAccent, foregroundColor: Colors.black, child: Text(des['orden_resolucion'].toString())),
                     title: Text('Respuesta: ${des['respuesta_correcta']}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    subtitle: Text('Tipo: ${des['tipo'].toString().toUpperCase()} | Puntos: ${des['puntos_otorgados']}', style: const TextStyle(color: Colors.grey)),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Tipo: ${des['tipo'].toString().toUpperCase()} | Puntos: ${des['puntos_otorgados']}', style: const TextStyle(color: Colors.grey)),
+                        if (des['pista'] != null && (des['pista'] as List).isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              'Pista: ${(des['pista'] as List)[0]['texto_ayuda']}', 
+                              style: const TextStyle(color: Colors.cyan, fontStyle: FontStyle.italic)
+                            ),
+                          ),
+                      ],
+                    ),
+
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit, color: Colors.cyan),
+                          onPressed: () => _mostrarModalDesafio(desafioAEditar: des),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                          onPressed: () => _eliminarDesafio(des['id_desafio']),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },
             ),
     );
+  }
+
+  Future<void> _eliminarDesafio(String idDesafio) async {
+    // 1. Diálogo de confirmación para evitar borrados accidentales
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: const Text('¿Eliminar desafío?', style: TextStyle(color: Colors.redAccent)),
+        content: const Text('Se eliminará este acertijo y su pista asociada de forma permanente.', style: TextStyle(color: Colors.white)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar', style: TextStyle(color: Colors.grey))),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      // 2. Borramos el desafío (la pista se borra sola por CASCADE)
+      await supabase.from('desafio').delete().eq('id_desafio', idDesafio);
+
+      // 3. Traemos los desafíos que quedaron, ordenados como estaban
+      final restantes = await supabase
+          .from('desafio')
+          .select('id_desafio')
+          .eq('id_experiencia', widget.experiencia['id_experiencia'])
+          .order('orden_resolucion');
+
+      // 4. Reindexamos el orden para tapar el hueco numérico
+      for (int i = 0; i < restantes.length; i++) {
+        await supabase
+            .from('desafio')
+            .update({'orden_resolucion': i + 1}) // El índice 0 pasa a ser orden 1, etc.
+            .eq('id_desafio', restantes[i]['id_desafio']);
+      }
+
+      await _cargarDesafios();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+      setState(() => _isLoading = false);
+    }
   }
 }
