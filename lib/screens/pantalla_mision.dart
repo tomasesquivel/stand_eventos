@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'pantalla_juego.dart';
 
 class PantallaMision extends StatefulWidget {
   // Ahora la pantalla exige que le pasen los datos de la experiencia al abrirse
@@ -82,13 +83,22 @@ class _PantallaMisionState extends State<PantallaMision> {
               height: 60,
               child: ElevatedButton(
                 onPressed: () {
-                  if (!context.mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('⏳ Cronómetro iniciado. ¡Buena suerte!'), backgroundColor: Colors.green, duration: Duration(seconds: 2)),
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PantallaJuego(experiencia: exp),
+                    ),
                   );
                 },
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.cyan, foregroundColor: Colors.black, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-                child: const Text('COMENZAR', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: 2)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.cyan,
+                  foregroundColor: Colors.black,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: const Text(
+                  'COMENZAR',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: 2),
+                ),
               ),
             ),
             const SizedBox(height: 20),
