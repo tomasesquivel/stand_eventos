@@ -212,198 +212,206 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                         ),
                       ),
                     )
-                  : SingleChildScrollView(
+: SingleChildScrollView(
                       padding: const EdgeInsets.all(24.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            exp['nombre'].toString().toUpperCase(),
-                            style: const TextStyle(
-                              color: Colors.grey,
-                              fontSize: 14,
-                              letterSpacing: 1.5,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'DESAFÍO #${_desafioActual!['orden_resolucion']}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.5,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.amberAccent.withAlpha(25),
-                              border: Border.all(color: Colors.amberAccent),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Row(
-                              children: [
-                                Icon(Icons.search, color: Colors.amberAccent, size: 20),
-                                SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'BUSCA LA PISTA EN EL ELEMENTO FÍSICO DEL STAND',
-                                    style: TextStyle(
-                                      color: Colors.amberAccent,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Recuadro con el texto descriptivo del desafío orientado al objeto físico
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1A1A1A),
-                              border: Border.all(
-                                color: _bloqueoActivo ? Colors.redAccent : Colors.cyan,
-                                width: 1.5,
-                              ),
-                              borderRadius: BorderRadius.circular(8),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: (_bloqueoActivo ? Colors.redAccent : Colors.cyan)
-                                      .withAlpha(30),
-                                  blurRadius: 15,
-                                  spreadRadius: 1,
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'DESCRIPCIÓN DEL ACERTIJO (UBICACIÓN EN STAND)',
-                                  style: TextStyle(
-                                    color: Colors.cyanAccent,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 1.2,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  (_desafioActual!['descripcion'] != null &&
-                                          _desafioActual!['descripcion']
-                                              .toString()
-                                              .trim()
-                                              .isNotEmpty)
-                                      ? _desafioActual!['descripcion'].toString()
-                                      : 'Inspecciona el elemento físico señalado en el stand y encuentra el código oculto para avanzar.',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    height: 1.5,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 32),
-
-                          // Métodos de ingreso con validación estricta del código físico
-                          if (_desafioActual!['tipo'] == 'texto') ...[
-                            TextField(
-                              controller: _respuestaCtrl,
-                              style: const TextStyle(color: Colors.white, fontSize: 18),
-                              decoration: InputDecoration(
-                                labelText: 'Ingresa el código del objeto físico',
-                                labelStyle: const TextStyle(color: Colors.grey),
-                                filled: true,
-                                fillColor: const Color(0xFF1A1A1A),
-                                enabledBorder: OutlineInputBorder(
-                                  borderSide: BorderSide(
-                                    color: _bloqueoActivo ? Colors.redAccent : Colors.white24,
-                                  ),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderSide: const BorderSide(color: Colors.cyanAccent, width: 2),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
+                      // ESC05: Transición suave entre desafíos para marcar la progresión
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 500),
+                        transitionBuilder: (Widget child, Animation<double> animation) {
+                          return FadeTransition(opacity: animation, child: child);
+                        },
+                        // El ValueKey basado en el índice fuerza la animación al cambiar de desafío
+                        child: Column(
+                          key: ValueKey<int>(_indiceActual),
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              exp['nombre'].toString().toUpperCase(),
+                              style: const TextStyle(
+                                color: Colors.grey,
+                                fontSize: 14,
+                                letterSpacing: 1.5,
                               ),
                             ),
-                            const SizedBox(height: 20),
-                            SizedBox(
-                              width: double.infinity,
-                              height: 55,
-                              child: ElevatedButton.icon(
-                                onPressed: () =>
-                                    _verificarCodigoElementoFisico(_respuestaCtrl.text),
-                                icon: const Icon(Icons.lock_open),
-                                label: const Text(
-                                  'VERIFICAR CÓDIGO',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 1.5,
-                                  ),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.cyan,
-                                  foregroundColor: Colors.black,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'DESAFÍO #${_desafioActual!['orden_resolucion']}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.5,
                               ),
                             ),
-                          ] else if (_desafioActual!['tipo'] == 'qr') ...[
-                            Center(
-                              child: Column(
+                            const SizedBox(height: 16),
+
+                            // Indicador de exploración
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.amberAccent.withAlpha(25),
+                                border: Border.all(color: Colors.amberAccent),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Row(
                                 children: [
-                                  const Text(
-                                    'ENCUENTRA Y ESCANEA EL QR OCULTO EN EL OBJETO FÍSICO DEL STAND',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(color: Colors.grey, fontSize: 13),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  SizedBox(
-                                    width: double.infinity,
-                                    height: 60,
-                                    child: ElevatedButton.icon(
-                                      onPressed: () {
-                                        _simularEscaneoQR(context);
-                                        //_verificarCodigoElementoFisico('');
-                                      },
-                                      icon: const Icon(Icons.qr_code_scanner, size: 28),
-                                      label: const Text(
-                                        'ESCANEAR CÓDIGO QR',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          letterSpacing: 1.5,
-                                        ),
-                                      ),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.cyan,
-                                        foregroundColor: Colors.black,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
+                                  Icon(Icons.search, color: Colors.amberAccent, size: 20),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'BUSCA LA PISTA EN EL ELEMENTO FÍSICO DEL STAND',
+                                      style: TextStyle(
+                                        color: Colors.amberAccent,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                   ),
                                 ],
                               ),
                             ),
+                            const SizedBox(height: 16),
+
+                            // Recuadro con el texto descriptivo del desafío
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1A1A1A),
+                                border: Border.all(
+                                  color: _bloqueoActivo ? Colors.redAccent : Colors.cyan,
+                                  width: 1.5,
+                                ),
+                                borderRadius: BorderRadius.circular(8),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: (_bloqueoActivo ? Colors.redAccent : Colors.cyan)
+                                        .withAlpha(30),
+                                    blurRadius: 15,
+                                    spreadRadius: 1,
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'DESCRIPCIÓN DEL ACERTIJO (UBICACIÓN EN STAND)',
+                                    style: TextStyle(
+                                      color: Colors.cyanAccent,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 1.2,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    (_desafioActual!['descripcion'] != null &&
+                                            _desafioActual!['descripcion']
+                                                .toString()
+                                                .trim()
+                                                .isNotEmpty)
+                                        ? _desafioActual!['descripcion'].toString()
+                                        : 'Inspecciona el elemento físico señalado en el stand y encuentra el código oculto para avanzar.',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      height: 1.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 32),
+
+                            // Métodos de ingreso según el tipo
+                            if (_desafioActual!['tipo'] == 'texto') ...[
+                              TextField(
+                                controller: _respuestaCtrl,
+                                style: const TextStyle(color: Colors.white, fontSize: 18),
+                                decoration: InputDecoration(
+                                  labelText: 'Ingresa el código del objeto físico',
+                                  labelStyle: const TextStyle(color: Colors.grey),
+                                  filled: true,
+                                  fillColor: const Color(0xFF1A1A1A),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderSide: BorderSide(
+                                      color: _bloqueoActivo ? Colors.redAccent : Colors.white24,
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderSide: const BorderSide(color: Colors.cyanAccent, width: 2),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 55,
+                                child: ElevatedButton.icon(
+                                  onPressed: () =>
+                                      _verificarCodigoElementoFisico(_respuestaCtrl.text),
+                                  icon: const Icon(Icons.lock_open),
+                                  label: const Text(
+                                    'VERIFICAR CÓDIGO',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 1.5,
+                                    ),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.cyan,
+                                    foregroundColor: Colors.black,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ] else if (_desafioActual!['tipo'] == 'qr') ...[
+                              Center(
+                                child: Column(
+                                  children: [
+                                    const Text(
+                                      'ENCUENTRA Y ESCANEA EL QR OCULTO EN EL OBJETO FÍSICO DEL STAND',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(color: Colors.grey, fontSize: 13),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      height: 60,
+                                      child: ElevatedButton.icon(
+                                        onPressed: () {
+                                          _simularEscaneoQR(context);
+                                        },
+                                        icon: const Icon(Icons.qr_code_scanner, size: 28),
+                                        label: const Text(
+                                          'ESCANEAR CÓDIGO QR',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 1.5,
+                                          ),
+                                        ),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.cyan,
+                                          foregroundColor: Colors.black,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
                     ),
     );
