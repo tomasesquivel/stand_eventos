@@ -104,6 +104,41 @@ class _PantallaJuegoState extends State<PantallaJuego> {
     );
   }
 
+  // ESC03: Simulador de escáner QR para entorno Web/PC
+  void _simularEscaneoQR(BuildContext context) {
+    if (_desafioActual == null) return;
+    
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1A1A1A),
+          title: const Text('Simulador de Cámara QR', style: TextStyle(color: Colors.cyan)),
+          content: const Text('Selecciona qué lectura querés simular para este elemento físico:'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                // Pasa un código incorrecto para disparar el bloqueo de ESC02
+                _verificarCodigoElementoFisico('CODIGO_ERRONEO_SIMULADO');
+              },
+              child: const Text('QR Inválido', style: TextStyle(color: Colors.redAccent)),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                // Pasa dinámicamente la respuesta correcta que espera este desafío
+                final String qrCorrecto = _desafioActual!['respuesta_correcta'].toString();
+                _verificarCodigoElementoFisico(qrCorrecto);
+              },
+              child: const Text('QR Válido', style: TextStyle(color: Colors.greenAccent)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final exp = widget.experiencia;
@@ -192,7 +227,7 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                           ),
                           const SizedBox(height: 16),
 
-                          // ESC02: Indicador de exploración en elementos físicos del stand
+                          
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             decoration: BoxDecoration(
@@ -333,8 +368,8 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                                     height: 60,
                                     child: ElevatedButton.icon(
                                       onPressed: () {
-                                        // Bloquea el avance hasta que se escanee el QR exacto (se conecta en ESC03)
-                                        _verificarCodigoElementoFisico('');
+                                        _simularEscaneoQR(context);
+                                        //_verificarCodigoElementoFisico('');
                                       },
                                       icon: const Icon(Icons.qr_code_scanner, size: 28),
                                       label: const Text(
