@@ -18,9 +18,11 @@ class _PantallaJuegoState extends State<PantallaJuego> {
   int _indiceActual = 0;
   bool _isLoading = true;
   String? _mensajeError;
+  
+  // Variables de estado para Retroalimentación (ESC07)
   bool _bloqueoActivo = false;
+  bool _exitoActivo = false; 
 
-  // Variables para ESC06 (Gestión de pistas)
   bool _mostrarPista = false;
   bool _pistaRegistradaEnDB = false;
 
@@ -64,7 +66,6 @@ class _PantallaJuegoState extends State<PantallaJuego> {
     }
   }
 
-  // Extrae el texto_ayuda de la relación con la tabla pista
   String? _obtenerTextoPista() {
     if (_desafioActual == null || _desafioActual!['pista'] == null) return null;
     final pistaData = _desafioActual!['pista'];
@@ -79,7 +80,6 @@ class _PantallaJuegoState extends State<PantallaJuego> {
     return null;
   }
 
-  // ESC06: Despliega la pista en pantalla y registra el uso en Supabase
   Future<void> _solicitarPista() async {
     final textoPista = _obtenerTextoPista();
     if (textoPista == null) {
@@ -97,35 +97,38 @@ class _PantallaJuegoState extends State<PantallaJuego> {
       _mostrarPista = true;
     });
 
-    // Registra la métrica en la BD enviando el booleano true solo la primera vez que la pide
     if (!_pistaRegistradaEnDB) {
       _pistaRegistradaEnDB = true;
       try {
         await supabase.from('progreso_desafio').insert({
           'id_desafio': _desafioActual!['id_desafio'],
-          'solicito_pista': true, // Criterio 3 cumplido
-          // 'id_participacion': '...' <-- Se vinculará en el Sprint 5 (DAT01)
+          'solicito_pista': true,
         });
-        debugPrint('Métrica ESC06: Uso de pista registrado en BD con éxito.');
       } catch (e) {
-        debugPrint('Aviso ESC06 (Esperado en Sprint 3): Falta ID de participación para registrar métrica -> $e');
+        debugPrint('Aviso ESC06: Falta ID de participación -> $e');
       }
     }
   }
 
-  void _verificarCodigoElementoFisico(String codigoIngresado) {
+  // ESC07: Retroalimentación inmediata convertida en asíncrona para la pausa visual
+  Future<void> _verificarCodigoElementoFisico(String codigoIngresado) async {
     if (_desafioActual == null) return;
+
+    // Oculta el teclado para que el usuario vea bien la retroalimentación
+    FocusScope.of(context).unfocus();
 
     final String codigoLimpio = codigoIngresado.trim().toUpperCase();
     final String codigoCorrecto = _desafioActual!['respuesta_correcta'].toString().trim().toUpperCase();
 
+    // ESC07 (Criterio 1): Advertencia visual directa en el campo
     if (codigoLimpio.isEmpty || codigoLimpio != codigoCorrecto) {
       setState(() {
         _bloqueoActivo = true;
+        _exitoActivo = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Acceso denegado: El código ingresado no es el correcto.'),
+          content: Text('Código incorrecto. Revisa el elemento físico e intenta de nuevo.'),
           backgroundColor: Colors.redAccent,
           duration: Duration(seconds: 2),
         ),
@@ -133,23 +136,39 @@ class _PantallaJuegoState extends State<PantallaJuego> {
       return;
     }
 
+    // ESC07 (Criterio 2): Confirmación visual clara antes de cargar el siguiente paso
     setState(() {
       _bloqueoActivo = false;
+      _exitoActivo = true; // Activa el reborde verde
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.white),
+            SizedBox(width: 8),
+            Text('¡Código correcto!', style: TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
+        backgroundColor: Colors.green,
+        duration: Duration(milliseconds: 1500),
+      ),
+    );
+
+    // Pausa dramática para que el usuario procese su victoria antes de que cambie la pantalla
+    await Future.delayed(const Duration(milliseconds: 1200));
+
+    if (!mounted) return;
+
+    setState(() {
+      _exitoActivo = false;
       _respuestaCtrl.clear();
-      
-      // Reseteamos las variables de la pista al avanzar de nivel
       _mostrarPista = false;
       _pistaRegistradaEnDB = false;
       
       if (_indiceActual + 1 < _desafios.length) {
         _indiceActual++;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('¡Código correcto! Accediendo al siguiente nivel...'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-          ),
-        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -319,14 +338,19 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                               padding: const EdgeInsets.all(20),
                               decoration: BoxDecoration(
                                 color: const Color(0xFF1A1A1A),
+                                // Borde dinámico según el estado ESC07
                                 border: Border.all(
-                                  color: _bloqueoActivo ? Colors.redAccent : Colors.cyan,
+                                  color: _exitoActivo 
+                                      ? Colors.greenAccent 
+                                      : (_bloqueoActivo ? Colors.redAccent : Colors.cyan),
                                   width: 1.5,
                                 ),
                                 borderRadius: BorderRadius.circular(8),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: (_bloqueoActivo ? Colors.redAccent : Colors.cyan)
+                                    color: (_exitoActivo 
+                                            ? Colors.greenAccent 
+                                            : (_bloqueoActivo ? Colors.redAccent : Colors.cyan))
                                         .withAlpha(30),
                                     blurRadius: 15,
                                     spreadRadius: 1,
@@ -365,16 +389,24 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                             if (_desafioActual!['tipo'] == 'texto') ...[
                               TextField(
                                 controller: _respuestaCtrl,
+                                // Bloquea la edición si acaba de acertar y está en la pausa
+                                enabled: !_exitoActivo, 
                                 style: const TextStyle(color: Colors.white, fontSize: 18),
                                 decoration: InputDecoration(
                                   labelText: 'Ingresa el código del objeto físico',
                                   labelStyle: const TextStyle(color: Colors.grey),
+                                  // ESC07: Mensaje de error nativo anclado al input
+                                  errorText: _bloqueoActivo ? 'Secuencia incorrecta.' : null,
                                   filled: true,
                                   fillColor: const Color(0xFF1A1A1A),
                                   enabledBorder: OutlineInputBorder(
                                     borderSide: BorderSide(
                                       color: _bloqueoActivo ? Colors.redAccent : Colors.white24,
                                     ),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  disabledBorder: OutlineInputBorder(
+                                    borderSide: const BorderSide(color: Colors.greenAccent, width: 2),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   focusedBorder: OutlineInputBorder(
@@ -388,7 +420,9 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                                 width: double.infinity,
                                 height: 55,
                                 child: ElevatedButton.icon(
-                                  onPressed: () => _verificarCodigoElementoFisico(_respuestaCtrl.text),
+                                  onPressed: _exitoActivo 
+                                      ? null 
+                                      : () => _verificarCodigoElementoFisico(_respuestaCtrl.text),
                                   icon: const Icon(Icons.lock_open),
                                   label: const Text(
                                     'VERIFICAR CÓDIGO',
@@ -397,6 +431,8 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.cyan,
                                     foregroundColor: Colors.black,
+                                    disabledBackgroundColor: Colors.green,
+                                    disabledForegroundColor: Colors.white,
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                   ),
                                 ),
@@ -415,15 +451,17 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                                       width: double.infinity,
                                       height: 60,
                                       child: ElevatedButton.icon(
-                                        onPressed: () => _simularEscaneoQR(context),
-                                        icon: const Icon(Icons.qr_code_scanner, size: 28),
-                                        label: const Text(
-                                          'ESCANEAR CÓDIGO QR',
-                                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.5),
+                                        onPressed: _exitoActivo ? null : () => _simularEscaneoQR(context),
+                                        icon: Icon(_exitoActivo ? Icons.check_circle : Icons.qr_code_scanner, size: 28),
+                                        label: Text(
+                                          _exitoActivo ? 'CÓDIGO VERIFICADO' : 'ESCANEAR CÓDIGO QR',
+                                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.5),
                                         ),
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: Colors.cyan,
                                           foregroundColor: Colors.black,
+                                          disabledBackgroundColor: Colors.green,
+                                          disabledForegroundColor: Colors.white,
                                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                         ),
                                       ),
@@ -435,7 +473,6 @@ class _PantallaJuegoState extends State<PantallaJuego> {
 
                             const SizedBox(height: 24),
 
-                            // ESC06: Renderizado del botón y recuadro de la pista solicitada
                             Center(
                               child: OutlinedButton.icon(
                                 onPressed: _solicitarPista,
