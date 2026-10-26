@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class PantallaJuego extends StatefulWidget {
@@ -122,6 +123,9 @@ class _PantallaJuegoState extends State<PantallaJuego> {
         _bloqueoActivo = true;
         _exitoActivo = false;
       });
+
+      HapticFeedback.lightImpact();
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Código incorrecto. Revisa el elemento físico e intenta de nuevo.'),
@@ -136,6 +140,8 @@ class _PantallaJuegoState extends State<PantallaJuego> {
       _bloqueoActivo = false;
       _exitoActivo = true; 
     });
+
+    HapticFeedback.heavyImpact();
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
