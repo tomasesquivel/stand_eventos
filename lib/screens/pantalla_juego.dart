@@ -20,6 +20,10 @@ class _PantallaJuegoState extends State<PantallaJuego> {
   String? _mensajeError;
   bool _bloqueoActivo = false;
 
+  // Variables para ESC06 (Gestión de pistas)
+  bool _mostrarPista = false;
+  bool _pistaRegistradaEnDB = false;
+
   Map<String, dynamic>? get _desafioActual =>
       (_desafios.isNotEmpty && _indiceActual < _desafios.length)
           ? _desafios[_indiceActual]
@@ -37,7 +41,6 @@ class _PantallaJuegoState extends State<PantallaJuego> {
     super.dispose();
   }
 
-  // Carga los desafíos ordenados secuencialmente comenzando por el orden 1 (ESC01)
   Future<void> _cargarDesafios() async {
     try {
       final data = await supabase
@@ -61,38 +64,84 @@ class _PantallaJuegoState extends State<PantallaJuego> {
     }
   }
 
+  // Extrae el texto_ayuda de la relación con la tabla pista
+  String? _obtenerTextoPista() {
+    if (_desafioActual == null || _desafioActual!['pista'] == null) return null;
+    final pistaData = _desafioActual!['pista'];
+
+    if (pistaData is List && pistaData.isNotEmpty) {
+      final texto = pistaData[0]['texto_ayuda']?.toString().trim();
+      return (texto != null && texto.isNotEmpty) ? texto : null;
+    } else if (pistaData is Map) {
+      final texto = pistaData['texto_ayuda']?.toString().trim();
+      return (texto != null && texto.isNotEmpty) ? texto : null;
+    }
+    return null;
+  }
+
+  // ESC06: Despliega la pista en pantalla y registra el uso en Supabase
+  Future<void> _solicitarPista() async {
+    final textoPista = _obtenerTextoPista();
+    if (textoPista == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No hay pistas configuradas para este desafío.'),
+          backgroundColor: Colors.orangeAccent,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _mostrarPista = true;
+    });
+
+    // Registra la métrica en la BD enviando el booleano true solo la primera vez que la pide
+    if (!_pistaRegistradaEnDB) {
+      _pistaRegistradaEnDB = true;
+      try {
+        await supabase.from('progreso_desafio').insert({
+          'id_desafio': _desafioActual!['id_desafio'],
+          'solicito_pista': true, // Criterio 3 cumplido
+          // 'id_participacion': '...' <-- Se vinculará en el Sprint 5 (DAT01)
+        });
+        debugPrint('Métrica ESC06: Uso de pista registrado en BD con éxito.');
+      } catch (e) {
+        debugPrint('Aviso ESC06 (Esperado en Sprint 3): Falta ID de participación para registrar métrica -> $e');
+      }
+    }
+  }
 
   void _verificarCodigoElementoFisico(String codigoIngresado) {
     if (_desafioActual == null) return;
 
-    // Convertimos a mayúsculas para que sea case-insensitive pero exacto
     final String codigoLimpio = codigoIngresado.trim().toUpperCase();
     final String codigoCorrecto = _desafioActual!['respuesta_correcta'].toString().trim().toUpperCase();
 
-    // Validación estricta (Criterio 2)
     if (codigoLimpio.isEmpty || codigoLimpio != codigoCorrecto) {
       setState(() {
         _bloqueoActivo = true;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Acceso denegado: El código ingresado no es el correcto.',
-          ),
+          content: Text('Acceso denegado: El código ingresado no es el correcto.'),
           backgroundColor: Colors.redAccent,
           duration: Duration(seconds: 2),
         ),
       );
-      return; 
+      return;
     }
 
-    // Respuesta exitosa: Avance automático (Criterio 3)
     setState(() {
       _bloqueoActivo = false;
-      _respuestaCtrl.clear(); // Limpiamos el input
+      _respuestaCtrl.clear();
+      
+      // Reseteamos las variables de la pista al avanzar de nivel
+      _mostrarPista = false;
+      _pistaRegistradaEnDB = false;
       
       if (_indiceActual + 1 < _desafios.length) {
-        // Pasa al siguiente acertijo
         _indiceActual++;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -102,7 +151,6 @@ class _PantallaJuegoState extends State<PantallaJuego> {
           ),
         );
       } else {
-        // Placeholder para cuando terminan todos los acertijos (Historia ESC11)
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('¡Misión Completada! (Pantalla final en desarrollo)'),
@@ -114,10 +162,8 @@ class _PantallaJuegoState extends State<PantallaJuego> {
     });
   }
 
-  // ESC03: Simulador de escáner QR para entorno Web/PC
   void _simularEscaneoQR(BuildContext context) {
     if (_desafioActual == null) return;
-    
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
@@ -129,7 +175,6 @@ class _PantallaJuegoState extends State<PantallaJuego> {
             TextButton(
               onPressed: () {
                 Navigator.pop(dialogContext);
-                // Pasa un código incorrecto para disparar el bloqueo de ESC02
                 _verificarCodigoElementoFisico('CODIGO_ERRONEO_SIMULADO');
               },
               child: const Text('QR Inválido', style: TextStyle(color: Colors.redAccent)),
@@ -137,7 +182,6 @@ class _PantallaJuegoState extends State<PantallaJuego> {
             TextButton(
               onPressed: () {
                 Navigator.pop(dialogContext);
-                // Pasa dinámicamente la respuesta correcta que espera este desafío
                 final String qrCorrecto = _desafioActual!['respuesta_correcta'].toString();
                 _verificarCodigoElementoFisico(qrCorrecto);
               },
@@ -154,6 +198,7 @@ class _PantallaJuegoState extends State<PantallaJuego> {
     final exp = widget.experiencia;
     final int minutos = exp['tiempo_limite_minutos'] ?? 5;
     final String tiempoFormateado = '${minutos.toString().padLeft(2, '0')}:00';
+    final String? textoPista = _obtenerTextoPista();
 
     return Scaffold(
       appBar: AppBar(
@@ -206,21 +251,19 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                       child: Padding(
                         padding: EdgeInsets.all(24.0),
                         child: Text(
-                          'No existe un desafío inicial (Orden 1) configurado para esta experiencia.',
+                          'No existe un desafío configurado.',
                           textAlign: TextAlign.center,
                           style: TextStyle(color: Colors.grey, fontSize: 16),
                         ),
                       ),
                     )
-: SingleChildScrollView(
+                  : SingleChildScrollView(
                       padding: const EdgeInsets.all(24.0),
-                      // ESC05: Transición suave entre desafíos para marcar la progresión
                       child: AnimatedSwitcher(
                         duration: const Duration(milliseconds: 500),
                         transitionBuilder: (Widget child, Animation<double> animation) {
                           return FadeTransition(opacity: animation, child: child);
                         },
-                        // El ValueKey basado en el índice fuerza la animación al cambiar de desafío
                         child: Column(
                           key: ValueKey<int>(_indiceActual),
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -245,7 +288,6 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                             ),
                             const SizedBox(height: 16),
 
-                            // Indicador de exploración
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                               decoration: BoxDecoration(
@@ -272,7 +314,6 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                             ),
                             const SizedBox(height: 16),
 
-                            // Recuadro con el texto descriptivo del desafío
                             Container(
                               width: double.infinity,
                               padding: const EdgeInsets.all(20),
@@ -296,7 +337,7 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Text(
-                                    'DESCRIPCIÓN DEL ACERTIJO (UBICACIÓN EN STAND)',
+                                    'DESCRIPCIÓN DEL ACERTIJO',
                                     style: TextStyle(
                                       color: Colors.cyanAccent,
                                       fontSize: 12,
@@ -307,12 +348,9 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                                   const SizedBox(height: 12),
                                   Text(
                                     (_desafioActual!['descripcion'] != null &&
-                                            _desafioActual!['descripcion']
-                                                .toString()
-                                                .trim()
-                                                .isNotEmpty)
+                                            _desafioActual!['descripcion'].toString().trim().isNotEmpty)
                                         ? _desafioActual!['descripcion'].toString()
-                                        : 'Inspecciona el elemento físico señalado en el stand y encuentra el código oculto para avanzar.',
+                                        : 'Inspecciona el elemento físico señalado en el stand.',
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 18,
@@ -324,7 +362,6 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                             ),
                             const SizedBox(height: 32),
 
-                            // Métodos de ingreso según el tipo
                             if (_desafioActual!['tipo'] == 'texto') ...[
                               TextField(
                                 controller: _respuestaCtrl,
@@ -351,23 +388,16 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                                 width: double.infinity,
                                 height: 55,
                                 child: ElevatedButton.icon(
-                                  onPressed: () =>
-                                      _verificarCodigoElementoFisico(_respuestaCtrl.text),
+                                  onPressed: () => _verificarCodigoElementoFisico(_respuestaCtrl.text),
                                   icon: const Icon(Icons.lock_open),
                                   label: const Text(
                                     'VERIFICAR CÓDIGO',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 1.5,
-                                    ),
+                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.5),
                                   ),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.cyan,
                                     foregroundColor: Colors.black,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                   ),
                                 ),
                               ),
@@ -376,7 +406,7 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                                 child: Column(
                                   children: [
                                     const Text(
-                                      'ENCUENTRA Y ESCANEA EL QR OCULTO EN EL OBJETO FÍSICO DEL STAND',
+                                      'ENCUENTRA Y ESCANEA EL QR OCULTO',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(color: Colors.grey, fontSize: 13),
                                     ),
@@ -385,25 +415,76 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                                       width: double.infinity,
                                       height: 60,
                                       child: ElevatedButton.icon(
-                                        onPressed: () {
-                                          _simularEscaneoQR(context);
-                                        },
+                                        onPressed: () => _simularEscaneoQR(context),
                                         icon: const Icon(Icons.qr_code_scanner, size: 28),
                                         label: const Text(
                                           'ESCANEAR CÓDIGO QR',
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                            letterSpacing: 1.5,
-                                          ),
+                                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.5),
                                         ),
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: Colors.cyan,
                                           foregroundColor: Colors.black,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                         ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+
+                            const SizedBox(height: 24),
+
+                            // ESC06: Renderizado del botón y recuadro de la pista solicitada
+                            Center(
+                              child: OutlinedButton.icon(
+                                onPressed: _solicitarPista,
+                                icon: const Icon(Icons.lightbulb_outline, color: Colors.amberAccent),
+                                label: Text(
+                                  _mostrarPista ? 'Pista revelada' : 'Solicitar Pista',
+                                  style: const TextStyle(color: Colors.amberAccent, fontWeight: FontWeight.bold),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(color: Colors.amberAccent),
+                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                              ),
+                            ),
+
+                            if (_mostrarPista && textoPista != null) ...[
+                              const SizedBox(height: 16),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.amberAccent.withAlpha(20),
+                                  border: Border.all(color: Colors.amberAccent),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Icon(Icons.info_outline, color: Colors.amberAccent),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'PISTA DE AYUDA:',
+                                            style: TextStyle(
+                                              color: Colors.amberAccent,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            textoPista,
+                                            style: const TextStyle(color: Colors.white, fontSize: 15),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ],
