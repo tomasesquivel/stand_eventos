@@ -19,7 +19,6 @@ class _PantallaJuegoState extends State<PantallaJuego> {
   bool _isLoading = true;
   String? _mensajeError;
   
-  // Variables de estado para Retroalimentación (ESC07)
   bool _bloqueoActivo = false;
   bool _exitoActivo = false; 
 
@@ -110,17 +109,14 @@ class _PantallaJuegoState extends State<PantallaJuego> {
     }
   }
 
-  // ESC07: Retroalimentación inmediata convertida en asíncrona para la pausa visual
   Future<void> _verificarCodigoElementoFisico(String codigoIngresado) async {
     if (_desafioActual == null) return;
 
-    // Oculta el teclado para que el usuario vea bien la retroalimentación
     FocusScope.of(context).unfocus();
 
     final String codigoLimpio = codigoIngresado.trim().toUpperCase();
     final String codigoCorrecto = _desafioActual!['respuesta_correcta'].toString().trim().toUpperCase();
 
-    // ESC07 (Criterio 1): Advertencia visual directa en el campo
     if (codigoLimpio.isEmpty || codigoLimpio != codigoCorrecto) {
       setState(() {
         _bloqueoActivo = true;
@@ -136,10 +132,9 @@ class _PantallaJuegoState extends State<PantallaJuego> {
       return;
     }
 
-    // ESC07 (Criterio 2): Confirmación visual clara antes de cargar el siguiente paso
     setState(() {
       _bloqueoActivo = false;
-      _exitoActivo = true; // Activa el reborde verde
+      _exitoActivo = true; 
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -156,7 +151,6 @@ class _PantallaJuegoState extends State<PantallaJuego> {
       ),
     );
 
-    // Pausa dramática para que el usuario procese su victoria antes de que cambie la pantalla
     await Future.delayed(const Duration(milliseconds: 1200));
 
     if (!mounted) return;
@@ -218,6 +212,11 @@ class _PantallaJuegoState extends State<PantallaJuego> {
     final int minutos = exp['tiempo_limite_minutos'] ?? 5;
     final String tiempoFormateado = '${minutos.toString().padLeft(2, '0')}:00';
     final String? textoPista = _obtenerTextoPista();
+
+    // ESC08: Cálculos para la barra de progreso
+    final int numeroDesafio = _indiceActual + 1;
+    final int totalDesafios = _desafios.length;
+    final double progreso = totalDesafios > 0 ? (numeroDesafio / totalDesafios) : 0.0;
 
     return Scaffold(
       appBar: AppBar(
@@ -296,16 +295,42 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                               ),
                             ),
                             const SizedBox(height: 6),
-                            Text(
-                              'DESAFÍO #${_desafioActual!['orden_resolucion']}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1.5,
-                              ),
+
+                            // ESC08: Indicador textual y visual del progreso
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  'DESAFÍO $numeroDesafio DE $totalDesafios',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.5,
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 4.0),
+                                  child: Text(
+                                    '${(progreso * 100).toInt()}%',
+                                    style: const TextStyle(
+                                      color: Colors.cyanAccent,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 8),
+                            LinearProgressIndicator(
+                              value: progreso,
+                              backgroundColor: Colors.white24,
+                              color: Colors.cyanAccent,
+                              minHeight: 6,
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                            const SizedBox(height: 24),
 
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -338,7 +363,6 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                               padding: const EdgeInsets.all(20),
                               decoration: BoxDecoration(
                                 color: const Color(0xFF1A1A1A),
-                                // Borde dinámico según el estado ESC07
                                 border: Border.all(
                                   color: _exitoActivo 
                                       ? Colors.greenAccent 
@@ -389,13 +413,11 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                             if (_desafioActual!['tipo'] == 'texto') ...[
                               TextField(
                                 controller: _respuestaCtrl,
-                                // Bloquea la edición si acaba de acertar y está en la pausa
                                 enabled: !_exitoActivo, 
                                 style: const TextStyle(color: Colors.white, fontSize: 18),
                                 decoration: InputDecoration(
                                   labelText: 'Ingresa el código del objeto físico',
                                   labelStyle: const TextStyle(color: Colors.grey),
-                                  // ESC07: Mensaje de error nativo anclado al input
                                   errorText: _bloqueoActivo ? 'Secuencia incorrecta.' : null,
                                   filled: true,
                                   fillColor: const Color(0xFF1A1A1A),
