@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'pantalla_tiempo_agotado.dart'; 
+import 'pantalla_mision_completada.dart';
 
 class PantallaJuego extends StatefulWidget {
   final Map<String, dynamic> experiencia;
@@ -209,13 +210,18 @@ class _PantallaJuegoState extends State<PantallaJuego> {
       if (_indiceActual + 1 < _desafios.length) {
         _indiceActual++;
       } else {
-
         _timer?.cancel();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('¡Misión Completada! (Pantalla final en desarrollo)'),
-            backgroundColor: Colors.amberAccent,
-            duration: Duration(seconds: 3),
+
+        final int minutosMaximos = widget.experiencia['tiempo_limite_minutos'] ?? 5;
+        final int segundosGastados = (minutosMaximos * 60) - _segundosRestantes;
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PantallaMisionCompletada(
+              experiencia: widget.experiencia,
+              segundosGastados: segundosGastados,
+            ),
           ),
         );
       }
