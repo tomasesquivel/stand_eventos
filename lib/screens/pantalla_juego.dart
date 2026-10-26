@@ -1,6 +1,8 @@
+import 'dart:async'; 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'pantalla_tiempo_agotado.dart'; 
 
 class PantallaJuego extends StatefulWidget {
   final Map<String, dynamic> experiencia;
@@ -22,9 +24,12 @@ class _PantallaJuegoState extends State<PantallaJuego> {
   
   bool _bloqueoActivo = false;
   bool _exitoActivo = false; 
-
   bool _mostrarPista = false;
   bool _pistaRegistradaEnDB = false;
+
+  
+  Timer? _timer;
+  int _segundosRestantes = 0;
 
   Map<String, dynamic>? get _desafioActual =>
       (_desafios.isNotEmpty && _indiceActual < _desafios.length)
@@ -34,13 +39,51 @@ class _PantallaJuegoState extends State<PantallaJuego> {
   @override
   void initState() {
     super.initState();
+
+    final int minutos = widget.experiencia['tiempo_limite_minutos'] ?? 5;
+    _segundosRestantes = minutos * 60;
+    
     _cargarDesafios();
+    _iniciarCronometro(); 
   }
 
   @override
   void dispose() {
+    _timer?.cancel();
     _respuestaCtrl.dispose();
     super.dispose();
+  }
+
+
+  void _iniciarCronometro() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_segundosRestantes > 0) {
+        setState(() {
+          _segundosRestantes--;
+        });
+      } else {
+        // Criterio 3: El tiempo llegó a cero
+        timer.cancel();
+        _redirigirTiempoAgotado();
+      }
+    });
+  }
+
+  void _redirigirTiempoAgotado() {
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PantallaTiempoAgotado(experiencia: widget.experiencia),
+      ),
+    );
+  }
+
+
+  String get _tiempoFormateado {
+    int minutos = _segundosRestantes ~/ 60;
+    int segundos = _segundosRestantes % 60;
+    return '${minutos.toString().padLeft(2, '0')}:${segundos.toString().padLeft(2, '0')}';
   }
 
   Future<void> _cargarDesafios() async {
@@ -69,7 +112,6 @@ class _PantallaJuegoState extends State<PantallaJuego> {
   String? _obtenerTextoPista() {
     if (_desafioActual == null || _desafioActual!['pista'] == null) return null;
     final pistaData = _desafioActual!['pista'];
-
     if (pistaData is List && pistaData.isNotEmpty) {
       final texto = pistaData[0]['texto_ayuda']?.toString().trim();
       return (texto != null && texto.isNotEmpty) ? texto : null;
@@ -123,9 +165,7 @@ class _PantallaJuegoState extends State<PantallaJuego> {
         _bloqueoActivo = true;
         _exitoActivo = false;
       });
-
-      HapticFeedback.lightImpact();
-
+      HapticFeedback.lightImpact(); 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Código incorrecto. Revisa el elemento físico e intenta de nuevo.'),
@@ -140,8 +180,7 @@ class _PantallaJuegoState extends State<PantallaJuego> {
       _bloqueoActivo = false;
       _exitoActivo = true; 
     });
-
-    HapticFeedback.heavyImpact();
+    HapticFeedback.heavyImpact(); 
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -170,6 +209,8 @@ class _PantallaJuegoState extends State<PantallaJuego> {
       if (_indiceActual + 1 < _desafios.length) {
         _indiceActual++;
       } else {
+
+        _timer?.cancel();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('¡Misión Completada! (Pantalla final en desarrollo)'),
@@ -215,14 +256,14 @@ class _PantallaJuegoState extends State<PantallaJuego> {
   @override
   Widget build(BuildContext context) {
     final exp = widget.experiencia;
-    final int minutos = exp['tiempo_limite_minutos'] ?? 5;
-    final String tiempoFormateado = '${minutos.toString().padLeft(2, '0')}:00';
     final String? textoPista = _obtenerTextoPista();
 
-    // ESC08: Cálculos para la barra de progreso
     final int numeroDesafio = _indiceActual + 1;
     final int totalDesafios = _desafios.length;
     final double progreso = totalDesafios > 0 ? (numeroDesafio / totalDesafios) : 0.0;
+
+    // Cambia el color del timer a rojo si quedan menos de 60 segundos
+    final Color colorTimer = _segundosRestantes <= 60 ? Colors.redAccent : Colors.cyanAccent;
 
     return Scaffold(
       appBar: AppBar(
@@ -242,12 +283,13 @@ class _PantallaJuegoState extends State<PantallaJuego> {
             ),
             Row(
               children: [
-                const Icon(Icons.circle, color: Colors.cyanAccent, size: 10),
+                Icon(Icons.circle, color: colorTimer, size: 10),
                 const SizedBox(width: 6),
+                // ESC10: Uso del getter _tiempoFormateado
                 Text(
-                  'TIEMPO: $tiempoFormateado',
-                  style: const TextStyle(
-                    color: Colors.cyanAccent,
+                  'TIEMPO: $_tiempoFormateado',
+                  style: TextStyle(
+                    color: colorTimer,
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
@@ -294,36 +336,23 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                           children: [
                             Text(
                               exp['nombre'].toString().toUpperCase(),
-                              style: const TextStyle(
-                                color: Colors.grey,
-                                fontSize: 14,
-                                letterSpacing: 1.5,
-                              ),
+                              style: const TextStyle(color: Colors.grey, fontSize: 14, letterSpacing: 1.5),
                             ),
                             const SizedBox(height: 6),
 
-                            // ESC08: Indicador textual y visual del progreso
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
                                   'DESAFÍO $numeroDesafio DE $totalDesafios',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 1.5,
-                                  ),
+                                  style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 1.5),
                                 ),
                                 Padding(
                                   padding: const EdgeInsets.only(bottom: 4.0),
                                   child: Text(
                                     '${(progreso * 100).toInt()}%',
-                                    style: const TextStyle(
-                                      color: Colors.cyanAccent,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    style: const TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold),
                                   ),
                                 ),
                               ],
@@ -352,11 +381,7 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                                   Expanded(
                                     child: Text(
                                       'BUSCA LA PISTA EN EL ELEMENTO FÍSICO DEL STAND',
-                                      style: TextStyle(
-                                        color: Colors.amberAccent,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                      style: TextStyle(color: Colors.amberAccent, fontSize: 12, fontWeight: FontWeight.bold),
                                     ),
                                   ),
                                 ],
@@ -370,18 +395,13 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                               decoration: BoxDecoration(
                                 color: const Color(0xFF1A1A1A),
                                 border: Border.all(
-                                  color: _exitoActivo 
-                                      ? Colors.greenAccent 
-                                      : (_bloqueoActivo ? Colors.redAccent : Colors.cyan),
+                                  color: _exitoActivo ? Colors.greenAccent : (_bloqueoActivo ? Colors.redAccent : Colors.cyan),
                                   width: 1.5,
                                 ),
                                 borderRadius: BorderRadius.circular(8),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: (_exitoActivo 
-                                            ? Colors.greenAccent 
-                                            : (_bloqueoActivo ? Colors.redAccent : Colors.cyan))
-                                        .withAlpha(30),
+                                    color: (_exitoActivo ? Colors.greenAccent : (_bloqueoActivo ? Colors.redAccent : Colors.cyan)).withAlpha(30),
                                     blurRadius: 15,
                                     spreadRadius: 1,
                                   ),
@@ -392,24 +412,14 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                                 children: [
                                   const Text(
                                     'DESCRIPCIÓN DEL ACERTIJO',
-                                    style: TextStyle(
-                                      color: Colors.cyanAccent,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 1.2,
-                                    ),
+                                    style: TextStyle(color: Colors.cyanAccent, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2),
                                   ),
                                   const SizedBox(height: 12),
                                   Text(
-                                    (_desafioActual!['descripcion'] != null &&
-                                            _desafioActual!['descripcion'].toString().trim().isNotEmpty)
+                                    (_desafioActual!['descripcion'] != null && _desafioActual!['descripcion'].toString().trim().isNotEmpty)
                                         ? _desafioActual!['descripcion'].toString()
                                         : 'Inspecciona el elemento físico señalado en el stand.',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      height: 1.5,
-                                    ),
+                                    style: const TextStyle(color: Colors.white, fontSize: 18, height: 1.5),
                                   ),
                                 ],
                               ),
@@ -428,9 +438,7 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                                   filled: true,
                                   fillColor: const Color(0xFF1A1A1A),
                                   enabledBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color: _bloqueoActivo ? Colors.redAccent : Colors.white24,
-                                    ),
+                                    borderSide: BorderSide(color: _bloqueoActivo ? Colors.redAccent : Colors.white24),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   disabledBorder: OutlineInputBorder(
@@ -448,9 +456,7 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                                 width: double.infinity,
                                 height: 55,
                                 child: ElevatedButton.icon(
-                                  onPressed: _exitoActivo 
-                                      ? null 
-                                      : () => _verificarCodigoElementoFisico(_respuestaCtrl.text),
+                                  onPressed: _exitoActivo ? null : () => _verificarCodigoElementoFisico(_respuestaCtrl.text),
                                   icon: const Icon(Icons.lock_open),
                                   label: const Text(
                                     'VERIFICAR CÓDIGO',
@@ -538,17 +544,10 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                                         children: [
                                           const Text(
                                             'PISTA DE AYUDA:',
-                                            style: TextStyle(
-                                              color: Colors.amberAccent,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 12,
-                                            ),
+                                            style: TextStyle(color: Colors.amberAccent, fontWeight: FontWeight.bold, fontSize: 12),
                                           ),
                                           const SizedBox(height: 4),
-                                          Text(
-                                            textoPista,
-                                            style: const TextStyle(color: Colors.white, fontSize: 15),
-                                          ),
+                                          Text(textoPista, style: const TextStyle(color: Colors.white, fontSize: 15)),
                                         ],
                                       ),
                                     ),
