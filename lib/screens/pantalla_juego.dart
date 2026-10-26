@@ -61,15 +61,15 @@ class _PantallaJuegoState extends State<PantallaJuego> {
     }
   }
 
-  // ESC02: Impide avanzar si no se ingresa el código exacto oculto en el elemento físico
+
   void _verificarCodigoElementoFisico(String codigoIngresado) {
     if (_desafioActual == null) return;
 
-    final String codigoLimpio = codigoIngresado.trim();
-    final String codigoCorrecto =
-        _desafioActual!['respuesta_correcta'].toString().trim();
+    // Convertimos a mayúsculas para que sea case-insensitive pero exacto
+    final String codigoLimpio = codigoIngresado.trim().toUpperCase();
+    final String codigoCorrecto = _desafioActual!['respuesta_correcta'].toString().trim().toUpperCase();
 
-    // Validación estricta: si está vacío o no coincide exactamente, bloquea el avance
+    // Validación estricta (Criterio 2)
     if (codigoLimpio.isEmpty || codigoLimpio != codigoCorrecto) {
       setState(() {
         _bloqueoActivo = true;
@@ -77,31 +77,41 @@ class _PantallaJuegoState extends State<PantallaJuego> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Acceso denegado: Debes ingresar el código exacto oculto en el elemento físico del stand.',
+            'Acceso denegado: El código ingresado no es el correcto.',
           ),
           backgroundColor: Colors.redAccent,
           duration: Duration(seconds: 2),
         ),
       );
-      return; // Bloquea la progresión al siguiente desafío
+      return; 
     }
 
-    // Si coincide exactamente, libera el bloqueo y permite avanzar
+    // Respuesta exitosa: Avance automático (Criterio 3)
     setState(() {
       _bloqueoActivo = false;
-      _respuestaCtrl.clear();
+      _respuestaCtrl.clear(); // Limpiamos el input
+      
       if (_indiceActual + 1 < _desafios.length) {
+        // Pasa al siguiente acertijo
         _indiceActual++;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('¡Código correcto! Accediendo al siguiente nivel...'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } else {
+        // Placeholder para cuando terminan todos los acertijos (Historia ESC11)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('¡Misión Completada! (Pantalla final en desarrollo)'),
+            backgroundColor: Colors.amberAccent,
+            duration: Duration(seconds: 3),
+          ),
+        );
       }
     });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('¡Código físico verificado correctamente!'),
-        backgroundColor: Colors.green,
-        duration: Duration(seconds: 2),
-      ),
-    );
   }
 
   // ESC03: Simulador de escáner QR para entorno Web/PC
