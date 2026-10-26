@@ -14,14 +14,21 @@ class _PantallaJuegoState extends State<PantallaJuego> {
   final supabase = Supabase.instance.client;
   final TextEditingController _respuestaCtrl = TextEditingController();
 
-  Map<String, dynamic>? _desafioActual;
+  List<dynamic> _desafios = [];
+  int _indiceActual = 0;
   bool _isLoading = true;
   String? _mensajeError;
+  bool _bloqueoActivo = false;
+
+  Map<String, dynamic>? get _desafioActual =>
+      (_desafios.isNotEmpty && _indiceActual < _desafios.length)
+          ? _desafios[_indiceActual]
+          : null;
 
   @override
   void initState() {
     super.initState();
-    _cargarDesafioInicial();
+    _cargarDesafios();
   }
 
   @override
@@ -30,28 +37,71 @@ class _PantallaJuegoState extends State<PantallaJuego> {
     super.dispose();
   }
 
-  
-  Future<void> _cargarDesafioInicial() async {
+  // Carga los desafíos ordenados secuencialmente comenzando por el orden 1 (ESC01)
+  Future<void> _cargarDesafios() async {
     try {
       final data = await supabase
           .from('desafio')
           .select('*, pista(*)')
           .eq('id_experiencia', widget.experiencia['id_experiencia'])
-          .eq('orden_resolucion', 1)
-          .maybeSingle();
+          .order('orden_resolucion', ascending: true);
 
       if (!mounted) return;
       setState(() {
-        _desafioActual = data;
+        _desafios = data;
+        _indiceActual = 0;
         _isLoading = false;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _mensajeError = 'Error al cargar el desafío inicial: $e';
+        _mensajeError = 'Error al cargar los desafíos: $e';
         _isLoading = false;
       });
     }
+  }
+
+  // ESC02: Impide avanzar si no se ingresa el código exacto oculto en el elemento físico
+  void _verificarCodigoElementoFisico(String codigoIngresado) {
+    if (_desafioActual == null) return;
+
+    final String codigoLimpio = codigoIngresado.trim();
+    final String codigoCorrecto =
+        _desafioActual!['respuesta_correcta'].toString().trim();
+
+    // Validación estricta: si está vacío o no coincide exactamente, bloquea el avance
+    if (codigoLimpio.isEmpty || codigoLimpio != codigoCorrecto) {
+      setState(() {
+        _bloqueoActivo = true;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Acceso denegado: Debes ingresar el código exacto oculto en el elemento físico del stand.',
+          ),
+          backgroundColor: Colors.redAccent,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return; // Bloquea la progresión al siguiente desafío
+    }
+
+    // Si coincide exactamente, libera el bloqueo y permite avanzar
+    setState(() {
+      _bloqueoActivo = false;
+      _respuestaCtrl.clear();
+      if (_indiceActual + 1 < _desafios.length) {
+        _indiceActual++;
+      }
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('¡Código físico verificado correctamente!'),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 2),
+      ),
+    );
   }
 
   @override
@@ -140,19 +190,50 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                               letterSpacing: 1.5,
                             ),
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 16),
 
-  
+                          // ESC02: Indicador de exploración en elementos físicos del stand
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.amberAccent.withAlpha(25),
+                              border: Border.all(color: Colors.amberAccent),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.search, color: Colors.amberAccent, size: 20),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'BUSCA LA PISTA EN EL ELEMENTO FÍSICO DEL STAND',
+                                    style: TextStyle(
+                                      color: Colors.amberAccent,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Recuadro con el texto descriptivo del desafío orientado al objeto físico
                           Container(
                             width: double.infinity,
                             padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
                               color: const Color(0xFF1A1A1A),
-                              border: Border.all(color: Colors.cyan, width: 1.5),
+                              border: Border.all(
+                                color: _bloqueoActivo ? Colors.redAccent : Colors.cyan,
+                                width: 1.5,
+                              ),
                               borderRadius: BorderRadius.circular(8),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.cyan.withAlpha(30),
+                                  color: (_bloqueoActivo ? Colors.redAccent : Colors.cyan)
+                                      .withAlpha(30),
                                   blurRadius: 15,
                                   spreadRadius: 1,
                                 ),
@@ -162,7 +243,7 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Text(
-                                  'DESCRIPCIÓN DEL ACERTIJO',
+                                  'DESCRIPCIÓN DEL ACERTIJO (UBICACIÓN EN STAND)',
                                   style: TextStyle(
                                     color: Colors.cyanAccent,
                                     fontSize: 12,
@@ -173,9 +254,12 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                                 const SizedBox(height: 12),
                                 Text(
                                   (_desafioActual!['descripcion'] != null &&
-                                          _desafioActual!['descripcion'].toString().trim().isNotEmpty)
+                                          _desafioActual!['descripcion']
+                                              .toString()
+                                              .trim()
+                                              .isNotEmpty)
                                       ? _desafioActual!['descripcion'].toString()
-                                      : 'Resuelve el primer acertijo oculto en los elementos físicos del stand.',
+                                      : 'Inspecciona el elemento físico señalado en el stand y encuentra el código oculto para avanzar.',
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 18,
@@ -187,18 +271,20 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                           ),
                           const SizedBox(height: 32),
 
-                         
+                          // Métodos de ingreso con validación estricta del código físico
                           if (_desafioActual!['tipo'] == 'texto') ...[
                             TextField(
                               controller: _respuestaCtrl,
                               style: const TextStyle(color: Colors.white, fontSize: 18),
                               decoration: InputDecoration(
-                                labelText: 'Ingresa la palabra clave',
+                                labelText: 'Ingresa el código del objeto físico',
                                 labelStyle: const TextStyle(color: Colors.grey),
                                 filled: true,
                                 fillColor: const Color(0xFF1A1A1A),
                                 enabledBorder: OutlineInputBorder(
-                                  borderSide: const BorderSide(color: Colors.white24),
+                                  borderSide: BorderSide(
+                                    color: _bloqueoActivo ? Colors.redAccent : Colors.white24,
+                                  ),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 focusedBorder: OutlineInputBorder(
@@ -212,14 +298,8 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                               width: double.infinity,
                               height: 55,
                               child: ElevatedButton.icon(
-                                onPressed: () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Respuesta enviada para verificación...'),
-                                      duration: Duration(seconds: 1),
-                                    ),
-                                  );
-                                },
+                                onPressed: () =>
+                                    _verificarCodigoElementoFisico(_respuestaCtrl.text),
                                 icon: const Icon(Icons.lock_open),
                                 label: const Text(
                                   'VERIFICAR CÓDIGO',
@@ -243,7 +323,7 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                               child: Column(
                                 children: [
                                   const Text(
-                                    'ESTE DESAFÍO REQUIERE ESCANEAR UN QR EN EL STAND',
+                                    'ENCUENTRA Y ESCANEA EL QR OCULTO EN EL OBJETO FÍSICO DEL STAND',
                                     textAlign: TextAlign.center,
                                     style: TextStyle(color: Colors.grey, fontSize: 13),
                                   ),
@@ -253,12 +333,8 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                                     height: 60,
                                     child: ElevatedButton.icon(
                                       onPressed: () {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(
-                                            content: Text('Cámara activada para escanear QR...'),
-                                            duration: Duration(seconds: 1),
-                                          ),
-                                        );
+                                        // Bloquea el avance hasta que se escanee el QR exacto (se conecta en ESC03)
+                                        _verificarCodigoElementoFisico('');
                                       },
                                       icon: const Icon(Icons.qr_code_scanner, size: 28),
                                       label: const Text(

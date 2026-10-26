@@ -100,15 +100,17 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                       TextFormField(
                         controller: descripcionCtrl,
                         decoration: const InputDecoration(
-                          labelText: 'Descripción / Consigna del acertijo',
+                          labelText: 'Consigna y objeto físico del stand',
                           labelStyle: TextStyle(color: Colors.grey),
-                          hintText: 'Ej: Encuentra la cifra oculta en el reloj...',
+                          hintText: 'Ej: Busca en el reloj de madera de la mesa central...',
                           hintStyle: TextStyle(color: Colors.white38),
                         ),
                         style: const TextStyle(color: Colors.white),
                         maxLines: 2,
                         validator: (value) =>
-                            value == null || value.trim().isEmpty ? 'La descripción es obligatoria' : null,
+                            value == null || value.trim().isEmpty
+                                ? 'Indica el acertijo y el objeto físico del stand'
+                                : null,
                       ),
                       const SizedBox(height: 10),
                       DropdownButtonFormField<String>(
