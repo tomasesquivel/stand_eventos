@@ -1,9 +1,11 @@
-import 'dart:async'; 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'pantalla_tiempo_agotado.dart'; 
+import 'pantalla_tiempo_agotado.dart';
 import 'pantalla_mision_completada.dart';
+import '../widgets/barra_progreso_escape.dart';
+import '../widgets/tarjeta_pista_ayuda.dart';   
 
 class PantallaJuego extends StatefulWidget {
   final Map<String, dynamic> experiencia;
@@ -28,7 +30,8 @@ class _PantallaJuegoState extends State<PantallaJuego> {
   bool _mostrarPista = false;
   bool _pistaRegistradaEnDB = false;
 
-  
+  int _puntajeAcumulado = 0;
+
   Timer? _timer;
   int _segundosRestantes = 0;
 
@@ -40,12 +43,11 @@ class _PantallaJuegoState extends State<PantallaJuego> {
   @override
   void initState() {
     super.initState();
-
     final int minutos = widget.experiencia['tiempo_limite_minutos'] ?? 5;
     _segundosRestantes = minutos * 60;
     
     _cargarDesafios();
-    _iniciarCronometro(); 
+    _iniciarCronometro();
   }
 
   @override
@@ -55,7 +57,6 @@ class _PantallaJuegoState extends State<PantallaJuego> {
     super.dispose();
   }
 
-
   void _iniciarCronometro() {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_segundosRestantes > 0) {
@@ -63,7 +64,6 @@ class _PantallaJuegoState extends State<PantallaJuego> {
           _segundosRestantes--;
         });
       } else {
-        // Criterio 3: El tiempo llegó a cero
         timer.cancel();
         _redirigirTiempoAgotado();
       }
@@ -71,7 +71,6 @@ class _PantallaJuegoState extends State<PantallaJuego> {
   }
 
   void _redirigirTiempoAgotado() {
-
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -79,7 +78,6 @@ class _PantallaJuegoState extends State<PantallaJuego> {
       ),
     );
   }
-
 
   String get _tiempoFormateado {
     int minutos = _segundosRestantes ~/ 60;
@@ -206,21 +204,25 @@ class _PantallaJuegoState extends State<PantallaJuego> {
       _respuestaCtrl.clear();
       _mostrarPista = false;
       _pistaRegistradaEnDB = false;
+
+
+      final int puntosGanados = int.tryParse(_desafioActual!['puntos_otorgados']?.toString() ?? '100') ?? 100;
+      _puntajeAcumulado += puntosGanados;
       
       if (_indiceActual + 1 < _desafios.length) {
         _indiceActual++;
       } else {
         _timer?.cancel();
-
         final int minutosMaximos = widget.experiencia['tiempo_limite_minutos'] ?? 5;
         final int segundosGastados = (minutosMaximos * 60) - _segundosRestantes;
-
+        
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) => PantallaMisionCompletada(
               experiencia: widget.experiencia,
               segundosGastados: segundosGastados,
+              puntajeTotal: _puntajeAcumulado,
             ),
           ),
         );
@@ -266,9 +268,7 @@ class _PantallaJuegoState extends State<PantallaJuego> {
 
     final int numeroDesafio = _indiceActual + 1;
     final int totalDesafios = _desafios.length;
-    final double progreso = totalDesafios > 0 ? (numeroDesafio / totalDesafios) : 0.0;
 
-    // Cambia el color del timer a rojo si quedan menos de 60 segundos
     final Color colorTimer = _segundosRestantes <= 60 ? Colors.redAccent : Colors.cyanAccent;
 
     return Scaffold(
@@ -289,9 +289,20 @@ class _PantallaJuegoState extends State<PantallaJuego> {
             ),
             Row(
               children: [
+                const Icon(Icons.star, color: Colors.amberAccent, size: 14),
+                const SizedBox(width: 4),
+                Text(
+                  '$_puntajeAcumulado PTS',
+                  style: const TextStyle(
+                    color: Colors.amberAccent,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(width: 16),
+
                 Icon(Icons.circle, color: colorTimer, size: 10),
                 const SizedBox(width: 6),
-                // ESC10: Uso del getter _tiempoFormateado
                 Text(
                   'TIEMPO: $_tiempoFormateado',
                   style: TextStyle(
@@ -346,30 +357,10 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                             ),
                             const SizedBox(height: 6),
 
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  'DESAFÍO $numeroDesafio DE $totalDesafios',
-                                  style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 1.5),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 4.0),
-                                  child: Text(
-                                    '${(progreso * 100).toInt()}%',
-                                    style: const TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            LinearProgressIndicator(
-                              value: progreso,
-                              backgroundColor: Colors.white24,
-                              color: Colors.cyanAccent,
-                              minHeight: 6,
-                              borderRadius: BorderRadius.circular(3),
+                            // APLICAMOS EL WIDGET EXTRAÍDO PARA LA BARRA DE PROGRESO
+                            BarraProgresoEscape(
+                              desafioActual: numeroDesafio,
+                              totalDesafios: totalDesafios,
                             ),
                             const SizedBox(height: 24),
 
@@ -529,37 +520,10 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                               ),
                             ),
 
+                            // APLICAMOS EL WIDGET EXTRAÍDO PARA LA TARJETA DE PISTA
                             if (_mostrarPista && textoPista != null) ...[
                               const SizedBox(height: 16),
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.amberAccent.withAlpha(20),
-                                  border: Border.all(color: Colors.amberAccent),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Icon(Icons.info_outline, color: Colors.amberAccent),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          const Text(
-                                            'PISTA DE AYUDA:',
-                                            style: TextStyle(color: Colors.amberAccent, fontWeight: FontWeight.bold, fontSize: 12),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(textoPista, style: const TextStyle(color: Colors.white, fontSize: 15)),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                              TarjetaPistaAyuda(textoPista: textoPista),
                             ],
                           ],
                         ),

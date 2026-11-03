@@ -3,21 +3,21 @@ import 'package:flutter/material.dart';
 class PantallaMisionCompletada extends StatelessWidget {
   final Map<String, dynamic> experiencia;
   final int segundosGastados;
+  final int puntajeTotal; 
 
   const PantallaMisionCompletada({
     super.key,
     required this.experiencia,
     required this.segundosGastados,
+    required this.puntajeTotal, 
   });
 
   @override
   Widget build(BuildContext context) {
-    // Calculamos los minutos y segundos exactos que tardó en ganar
     final int minutos = segundosGastados ~/ 60;
     final int segundos = segundosGastados % 60;
     final String tiempoFormateado = '${minutos.toString().padLeft(2, '0')}:${segundos.toString().padLeft(2, '0')}';
     
-    // Si el admin configuró un mensaje en ADM02, lo mostramos; sino, un código por defecto
     final String mensajeRecompensa = (experiencia['mensaje_recompensa_final'] != null && 
                                       experiencia['mensaje_recompensa_final'].toString().trim().isNotEmpty)
         ? experiencia['mensaje_recompensa_final'].toString()
@@ -31,7 +31,6 @@ class PantallaMisionCompletada extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Círculo verde de Sistema Descifrado
               Container(
                 width: 150,
                 height: 150,
@@ -61,6 +60,13 @@ class PantallaMisionCompletada extends StatelessWidget {
               const SizedBox(height: 40),
               const Text('ESTADÍSTICAS DE OPERARIO', style: TextStyle(color: Colors.grey, fontSize: 14)),
               const SizedBox(height: 10),
+              
+              // GAM01: Mostramos el puntaje final ganado
+              Text(
+                'Puntaje Obtenido: $puntajeTotal pts', 
+                style: const TextStyle(color: Colors.amberAccent, fontSize: 18, fontWeight: FontWeight.bold)
+              ),
+              const SizedBox(height: 5),
               Text(
                 'Tiempo Total: $tiempoFormateado min', 
                 style: const TextStyle(color: Colors.white, fontSize: 16)
@@ -102,7 +108,6 @@ class PantallaMisionCompletada extends StatelessWidget {
                 height: 55,
                 child: OutlinedButton(
                   onPressed: () {
-                    // Limpia la pila de navegación y vuelve al catálogo/inicio
                     Navigator.popUntil(context, (route) => route.isFirst);
                   },
                   style: OutlinedButton.styleFrom(
