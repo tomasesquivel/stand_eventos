@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
+import '../utils/sesion_local.dart';
 
 class PantallaMisionCompletada extends StatelessWidget {
   final Map<String, dynamic> experiencia;
   final int segundosGastados;
-  final int puntajeTotal; 
+  final int puntajeTotal;
 
   const PantallaMisionCompletada({
     super.key,
     required this.experiencia,
     required this.segundosGastados,
-    required this.puntajeTotal, 
+    required this.puntajeTotal,
   });
 
   @override
   Widget build(BuildContext context) {
+    SesionLocal.misionesCompletadas.add(experiencia['id_experiencia'].toString());
+    
     final int minutos = segundosGastados ~/ 60;
     final int segundos = segundosGastados % 60;
     final String tiempoFormateado = '${minutos.toString().padLeft(2, '0')}:${segundos.toString().padLeft(2, '0')}';
@@ -23,60 +26,62 @@ class PantallaMisionCompletada extends StatelessWidget {
         ? experiencia['mensaje_recompensa_final'].toString()
         : 'ESC-7X9K-2024';
 
+    final String nombreMision = experiencia['nombre'].toString().toUpperCase();
+
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D0D),
       body: Center(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 150,
-                height: 150,
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 35, horizontal: 20),
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
                   color: const Color(0xFF1A1A1A),
-                  border: Border.all(color: Colors.greenAccent, width: 4),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.amberAccent, width: 2),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.greenAccent.withAlpha(50), 
-                      blurRadius: 40, 
-                      spreadRadius: 10
+                      color: Colors.amberAccent.withAlpha(40), 
+                      blurRadius: 30, 
+                      spreadRadius: 5
                     ),
                   ]
                 ),
-                child: const Icon(Icons.check, color: Colors.greenAccent, size: 80),
+                child: Column(
+                  children: [
+                    const Text(
+                      'INSIGNIA DESBLOQUEADA',
+                      style: TextStyle(color: Colors.amberAccent, fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 2),
+                    ),
+                    const SizedBox(height: 20),
+                    const Icon(Icons.military_tech, color: Colors.amberAccent, size: 100),
+                    const SizedBox(height: 20),
+                    Text(
+                      nombreMision, 
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 1.5)
+                    ),
+                  ],
+                ),
               ),
+              
               const SizedBox(height: 40),
               
-              const Text(
-                'MISIÓN COMPLETADA', 
-                style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 2)
-              ),
-              const SizedBox(height: 10),
-              const Text('SISTEMA DESCIFRADO EXITOSAMENTE', style: TextStyle(color: Colors.greenAccent, fontSize: 14, letterSpacing: 1.5)),
-              
-              const SizedBox(height: 40),
-              const Text('ESTADÍSTICAS DE OPERARIO', style: TextStyle(color: Colors.grey, fontSize: 14)),
-              const SizedBox(height: 10),
-              
-              // GAM01: Mostramos el puntaje final ganado
               Text(
                 'Puntaje Obtenido: $puntajeTotal pts', 
-                style: const TextStyle(color: Colors.amberAccent, fontSize: 18, fontWeight: FontWeight.bold)
+                style: const TextStyle(color: Colors.cyanAccent, fontSize: 18, fontWeight: FontWeight.bold)
               ),
-              const SizedBox(height: 5),
+              const SizedBox(height: 8),
               Text(
                 'Tiempo Total: $tiempoFormateado min', 
                 style: const TextStyle(color: Colors.white, fontSize: 16)
               ),
-              Text(
-                'Misión: ${experiencia['nombre'].toString().toUpperCase()}', 
-                style: const TextStyle(color: Colors.white, fontSize: 16)
-              ),
               
-              const SizedBox(height: 30),
+              const SizedBox(height: 40),
               const Text(
                 '¡Felicidades!', 
                 style: TextStyle(color: Colors.greenAccent, fontSize: 18, fontWeight: FontWeight.bold)

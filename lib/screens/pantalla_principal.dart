@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'pantalla_admin.dart';
 import 'pantalla_catalogo.dart';
-
+import 'pantalla_ingreso_alias.dart';
 class PantallaPrincipal extends StatelessWidget {
   const PantallaPrincipal({super.key});
 
@@ -35,7 +35,7 @@ class PantallaPrincipal extends StatelessWidget {
                 if (!context.mounted) return;
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const PantallaCatalogo()),
+                  MaterialPageRoute(builder: (context) => const PantallaIngresoAlias()),
                 );
               },
               child: const Text('Simular QR Válido', style: TextStyle(color: Colors.greenAccent)),
@@ -79,7 +79,7 @@ class PantallaPrincipal extends StatelessWidget {
                 if (codigoController.text.trim().toUpperCase() == 'ALPHA-01') {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const PantallaCatalogo()),
+                    MaterialPageRoute(builder: (context) => const PantallaIngresoAlias()),
                   );
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
