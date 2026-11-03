@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'pantalla_admin.dart';
-import 'pantalla_catalogo.dart';
 import 'pantalla_ingreso_alias.dart';
 class PantallaPrincipal extends StatelessWidget {
   const PantallaPrincipal({super.key});

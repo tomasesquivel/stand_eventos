@@ -5,7 +5,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'pantalla_tiempo_agotado.dart';
 import 'pantalla_mision_completada.dart';
 import '../widgets/barra_progreso_escape.dart';
-import '../widgets/tarjeta_pista_ayuda.dart';   
+import '../widgets/tarjeta_pista_ayuda.dart';
+import '../utils/sesion_local.dart';   
 
 class PantallaJuego extends StatefulWidget {
   final Map<String, dynamic> experiencia;
@@ -211,11 +212,30 @@ class _PantallaJuegoState extends State<PantallaJuego> {
       
       if (_indiceActual + 1 < _desafios.length) {
         _indiceActual++;
-      } else {
+      }  else {
+       
         _timer?.cancel();
+        
+     
         final int minutosMaximos = widget.experiencia['tiempo_limite_minutos'] ?? 5;
         final int segundosGastados = (minutosMaximos * 60) - _segundosRestantes;
         
+    
+        final String alias = SesionLocal.aliasJugador ?? 'INVITADO';
+        
+
+        supabase.from('participacion').insert({
+          'id_experiencia': widget.experiencia['id_experiencia'],
+          'alias': alias,
+          'puntaje_obtenido': _puntajeAcumulado,
+          'tiempo_segundos': segundosGastados,
+        }).then((_) {
+          debugPrint('Métricas de $alias guardadas exitosamente.');
+        }).catchError((error) {
+          debugPrint('Aviso DAT01 - Error al guardar métricas: $error');
+        });
+
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(

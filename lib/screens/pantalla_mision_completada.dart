@@ -113,7 +113,7 @@ class PantallaMisionCompletada extends StatelessWidget {
                 height: 55,
                 child: OutlinedButton(
                   onPressed: () {
-                    Navigator.popUntil(context, (route) => route.isFirst);
+                    Navigator.pop(context);
                   },
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Colors.white24),

@@ -13,6 +13,12 @@ class _PantallaIngresoAliasState extends State<PantallaIngresoAlias> {
   final TextEditingController _aliasCtrl = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
+  @override
+  void initState() {
+    super.initState();
+    SesionLocal.reiniciarSesion();
+  }
+
   void _ingresarAlSistema() {
     if (_formKey.currentState!.validate()) {
 
