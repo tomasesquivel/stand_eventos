@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'pantalla_admin_desafios.dart';
 import 'pantalla_elementos_fisicos.dart';
+import 'pantalla_admin_hoja_armado.dart';
 
 class PantallaAdmin extends StatefulWidget {
   const PantallaAdmin({super.key});
@@ -307,6 +308,17 @@ class _PantallaAdminState extends State<PantallaAdmin> {
                                 style: TextButton.styleFrom(foregroundColor: Colors.greenAccent),
                                 child: const Text('OBJETOS', style: TextStyle(fontWeight: FontWeight.bold)),
                               ),
+
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.push(context, MaterialPageRoute(
+                                    builder: (context) => PantallaAdminHojaArmado(experiencia: exp),
+                                  ));
+                                },
+                                style: TextButton.styleFrom(foregroundColor: Colors.purpleAccent),
+                                child: const Icon(Icons.list_alt), // Un ícono para que no quede tan largo el menú
+                              ),
+                              
                               IconButton(
                                 icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
                                 onPressed: () => _eliminarExperiencia(exp['id_experiencia']),
