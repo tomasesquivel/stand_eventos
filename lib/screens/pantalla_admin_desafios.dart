@@ -13,24 +13,33 @@ class PantallaAdminDesafios extends StatefulWidget {
 class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
   final supabase = Supabase.instance.client;
   List<dynamic> _desafios = [];
+  List<dynamic> _elementosDisponibles = []; // Nueva lista para almacenar los objetos físicos
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _cargarDesafios();
+    _cargarDatos();
   }
 
-  Future<void> _cargarDesafios() async {
+  // Criterio 1: Carga combinada de desafíos y elementos físicos
+  Future<void> _cargarDatos() async {
     try {
-      final data = await supabase
+      final dataDesafios = await supabase
           .from('desafio')
-          .select('*, pista(*)')
+          .select('*, pista(*), elemento_fisico(nombre, codigo_qr)') // Traemos info del elemento asociado
           .eq('id_experiencia', widget.experiencia['id_experiencia'])
           .order('orden_resolucion', ascending: true);
 
+      final dataElementos = await supabase
+          .from('elemento_fisico')
+          .select()
+          .eq('id_experiencia', widget.experiencia['id_experiencia'])
+          .order('nombre', ascending: true);
+
       setState(() {
-        _desafios = data;
+        _desafios = dataDesafios;
+        _elementosDisponibles = dataElementos;
         _isLoading = false;
       });
     } catch (e) {
@@ -64,6 +73,9 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
     }
     final pistaCtrl = TextEditingController(text: pistaExistenteText);
     String tipoSeleccionado = esEdicion ? desafioAEditar['tipo'] : 'texto';
+    
+    // Nueva variable para almacenar el elemento físico seleccionado (Criterio 2)
+    int? idElementoSeleccionado = esEdicion ? desafioAEditar['id_elemento'] : null;
 
     showDialog(
       context: context,
@@ -100,21 +112,54 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                       TextFormField(
                         controller: descripcionCtrl,
                         decoration: const InputDecoration(
-                          labelText: 'Consigna y objeto físico del stand',
+                          labelText: 'Consigna del desafío',
                           labelStyle: TextStyle(color: Colors.grey),
-                          hintText: 'Ej: Busca en el reloj de madera de la mesa central...',
+                          hintText: 'Ej: Busca en el reloj...',
                           hintStyle: TextStyle(color: Colors.white38),
                         ),
                         style: const TextStyle(color: Colors.white),
                         maxLines: 2,
                         validator: (value) =>
                             value == null || value.trim().isEmpty
-                                ? 'Indica el acertijo y el objeto físico del stand'
+                                ? 'Indica el acertijo de la misión'
                                 : null,
                       ),
                       const SizedBox(height: 10),
+                      
+                      // Criterio 1: Selector de Elementos Físicos
+                      DropdownButtonFormField<int?>(
+                        value: idElementoSeleccionado,
+                        dropdownColor: const Color(0xFF1A1A1A),
+                        style: const TextStyle(color: Colors.white),
+                        decoration: const InputDecoration(
+                          labelText: 'Objeto Físico Vinculado (Opcional/QR)',
+                          labelStyle: TextStyle(color: Colors.greenAccent),
+                        ),
+                        items: [
+                          const DropdownMenuItem<int?>(
+                            value: null,
+                            child: Text('Ninguno (Solo pantalla)'),
+                          ),
+                          ..._elementosDisponibles.map((el) {
+                            return DropdownMenuItem<int?>(
+                              value: el['id_elemento'],
+                              child: Text(el['nombre']),
+                            );
+                          }),
+                        ],
+                        onChanged: (val) => setStateModal(() => idElementoSeleccionado = val),
+                        validator: (value) {
+                          // Criterio 3: Validación estricta para tipo QR
+                          if (tipoSeleccionado == 'qr' && value == null) {
+                            return 'Un desafío QR requiere un objeto físico obligatorio.';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 10),
+
                       DropdownButtonFormField<String>(
-                        initialValue: tipoSeleccionado,
+                        value: tipoSeleccionado,
                         dropdownColor: const Color(0xFF1A1A1A),
                         style: const TextStyle(color: Colors.white),
                         decoration: const InputDecoration(
@@ -123,19 +168,30 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                         ),
                         items: const [
                           DropdownMenuItem(value: 'texto', child: Text('Ingreso de Palabra Clave')),
-                          DropdownMenuItem(value: 'qr', child: Text('Escaneo QR')),
+                          DropdownMenuItem(value: 'qr', child: Text('Escaneo QR físico')),
                         ],
-                        onChanged: (val) => setStateModal(() => tipoSeleccionado = val!),
+                        onChanged: (val) {
+                          setStateModal(() {
+                            tipoSeleccionado = val!;
+                            // Autocompletado inteligente del ID QR si se selecciona un objeto
+                            if (tipoSeleccionado == 'qr' && idElementoSeleccionado != null) {
+                              final el = _elementosDisponibles.firstWhere((e) => e['id_elemento'] == idElementoSeleccionado);
+                              respuestaCtrl.text = el['codigo_qr'] ?? '';
+                            }
+                          });
+                        },
                       ),
                       TextFormField(
                         controller: respuestaCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Respuesta correcta / ID QR',
-                          labelStyle: TextStyle(color: Colors.grey),
+                        decoration: InputDecoration(
+                          labelText: tipoSeleccionado == 'qr' ? 'Código UUID del QR (Automático)' : 'Respuesta correcta',
+                          labelStyle: const TextStyle(color: Colors.grey),
                         ),
                         style: const TextStyle(color: Colors.white),
+                        // Bloqueamos la edición manual si es un QR para evitar errores
+                        readOnly: tipoSeleccionado == 'qr', 
                         validator: (value) =>
-                            value == null || value.trim().isEmpty ? 'La respuesta es obligatoria' : null,
+                            value == null || value.trim().isEmpty ? 'La respuesta/código es obligatoria' : null,
                       ),
                       TextFormField(
                         controller: puntosCtrl,
@@ -176,16 +232,26 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                   onPressed: () async {
                     if (!formKey.currentState!.validate()) return;
 
+                    // Validacion Criterio 3 (Seguro doble)
+                    if (tipoSeleccionado == 'qr' && idElementoSeleccionado == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Debe seleccionar un objeto físico para desafíos QR'), backgroundColor: Colors.red),
+                      );
+                      return;
+                    }
+
                     Navigator.pop(dialogContext);
                     setState(() => _isLoading = true);
 
                     try {
+                      // Criterio 2: Guardamos la vinculación en la BD
                       final datosDesafio = {
                         'orden_resolucion': int.parse(ordenCtrl.text.trim()),
                         'descripcion': descripcionCtrl.text.trim(),
                         'tipo': tipoSeleccionado,
                         'respuesta_correcta': respuestaCtrl.text.trim(),
                         'puntos_otorgados': int.parse(puntosCtrl.text.trim()),
+                        'id_elemento': idElementoSeleccionado, // Inyectamos el ID
                       };
 
                       if (esEdicion) {
@@ -222,7 +288,7 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                         }
                       }
 
-                      await _cargarDesafios();
+                      await _cargarDatos();
                     } catch (e) {
                       if (!mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -296,9 +362,18 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                           children: [
                             const SizedBox(height: 4),
                             Text(
-                              'Respuesta: ${des['respuesta_correcta']} | Tipo: ${des['tipo'].toString().toUpperCase()} | Pts: ${des['puntos_otorgados']}',
+                              'Tipo: ${des['tipo'].toString().toUpperCase()} | Pts: ${des['puntos_otorgados']}',
                               style: const TextStyle(color: Colors.grey),
                             ),
+                            // Mostramos el nombre del objeto vinculado si existe
+                            if (des['elemento_fisico'] != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(
+                                  '📌 Objeto: ${des['elemento_fisico']['nombre']}',
+                                  style: const TextStyle(color: Colors.greenAccent, fontSize: 12),
+                                ),
+                              ),
                             if (des['pista'] != null && (des['pista'] as List).isNotEmpty)
                               Padding(
                                 padding: const EdgeInsets.only(top: 4),
@@ -373,7 +448,7 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
             .eq('id_desafio', restantes[i]['id_desafio']);
       }
 
-      await _cargarDesafios();
+      await _cargarDatos();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
