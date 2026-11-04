@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
 class PantallaElementosFisicos extends StatefulWidget {
   final Map<String, dynamic> experiencia;
@@ -24,7 +28,6 @@ class _PantallaElementosFisicosState extends State<PantallaElementosFisicos> {
     _cargarElementos();
   }
 
-  // Criterio 3: Muestra en formato de lista los elementos de ESTA experiencia
   Future<void> _cargarElementos() async {
     try {
       final data = await _supabase
@@ -43,7 +46,6 @@ class _PantallaElementosFisicosState extends State<PantallaElementosFisicos> {
     }
   }
 
-  // Criterio 1 y 2: Da de alta un objeto real y lo guarda en la DB
   Future<void> _agregarElemento() async {
     final nombre = _nombreCtrl.text.trim();
     if (nombre.isEmpty) return;
@@ -59,7 +61,7 @@ class _PantallaElementosFisicosState extends State<PantallaElementosFisicos> {
 
       _nombreCtrl.clear();
       _descCtrl.clear();
-      await _cargarElementos();
+      await _cargarElementos(); 
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -72,6 +74,125 @@ class _PantallaElementosFisicosState extends State<PantallaElementosFisicos> {
     }
   }
 
+  Future<void> _generarYDescargarPDF(String nombreElemento, String codigoQr) async {
+    final doc = pw.Document();
+    
+    doc.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return pw.Center(
+            child: pw.Column(
+              mainAxisAlignment: pw.MainAxisAlignment.center,
+              children: [
+                pw.Text(
+                  nombreElemento.toUpperCase(), 
+                  style: pw.TextStyle(fontSize: 40, fontWeight: pw.FontWeight.bold)
+                ),
+                pw.SizedBox(height: 30),
+                pw.BarcodeWidget(
+                  barcode: pw.Barcode.qrCode(),
+                  data: codigoQr,
+                  width: 300,
+                  height: 300,
+                ),
+                pw.SizedBox(height: 30),
+                pw.Text(
+                  'ESCANEA ESTE CODIGO CON LA APP', 
+                  style: pw.TextStyle(fontSize: 20, color: PdfColors.grey700)
+                ),
+                pw.SizedBox(height: 10),
+                pw.Text(
+                  'Codigo interno: $codigoQr', 
+                  style: pw.TextStyle(fontSize: 10, color: PdfColors.grey500)
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => doc.save(),
+      name: 'QR_$nombreElemento',
+    );
+  }
+
+  void _mostrarDialogoQR(Map<String, dynamic> item) {
+    final String codigoQr = item['codigo_qr']?.toString() ?? 'ERROR-SIN-QR';
+    final String nombre = item['nombre']?.toString() ?? 'Elemento';
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Cerrar código QR',
+      barrierColor: Colors.black54,
+      pageBuilder: (dialogContext, animation, secondaryAnimation) {
+        return SafeArea(
+          child: Center(
+            child: Material(
+              color: const Color(0xFF1A1A1A),
+              child: SizedBox(
+                width: 320,
+                height: 440,
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      Text(
+                        'CÓDIGO QR - $nombre',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.cyanAccent),
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: 232,
+                        height: 232,
+                        child: Container(
+                          color: Colors.white,
+                          padding: const EdgeInsets.all(16),
+                          child: QrImageView(
+                            data: codigoQr,
+                            version: QrVersions.auto,
+                            size: 200,
+                            backgroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.pop(dialogContext);
+                            _generarYDescargarPDF(nombre, codigoQr);
+                          },
+                          icon: const Icon(Icons.picture_as_pdf, color: Colors.black),
+                          label: const Text(
+                            'DESCARGAR PDF',
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.cyan,
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   void dispose() {
     _nombreCtrl.dispose();
@@ -79,9 +200,9 @@ class _PantallaElementosFisicosState extends State<PantallaElementosFisicos> {
     super.dispose();
   }
 
- @override
+  @override
   Widget build(BuildContext context) {
-    final String nombreExp = widget.experiencia['nombre'].toString().toUpperCase();
+    final String nombreExp = widget.experiencia['nombre']?.toString().toUpperCase() ?? 'EXPERIENCIA';
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D0D),
@@ -100,7 +221,6 @@ class _PantallaElementosFisicosState extends State<PantallaElementosFisicos> {
             ),
             const SizedBox(height: 16),
             
-            // Campo para el Nombre
             TextField(
               controller: _nombreCtrl,
               style: const TextStyle(color: Colors.white),
@@ -116,7 +236,6 @@ class _PantallaElementosFisicosState extends State<PantallaElementosFisicos> {
             ),
             const SizedBox(height: 12),
 
-            // Campo para la Descripción
             TextField(
               controller: _descCtrl,
               style: const TextStyle(color: Colors.white),
@@ -132,7 +251,6 @@ class _PantallaElementosFisicosState extends State<PantallaElementosFisicos> {
             ),
             const SizedBox(height: 16),
 
-            // Botón de Agregar
             SizedBox(
               width: double.infinity,
               height: 50,
@@ -154,7 +272,7 @@ class _PantallaElementosFisicosState extends State<PantallaElementosFisicos> {
             ),
             const Divider(color: Colors.white24),
             
-            // EL EXPANDED CRÍTICO QUE EVITA EL CRASHEO
+            // EL EXPANDED PROTEGIDO
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator(color: Colors.cyan))
@@ -170,19 +288,29 @@ class _PantallaElementosFisicosState extends State<PantallaElementosFisicos> {
                               margin: const EdgeInsets.only(bottom: 12),
                               child: ListTile(
                                 leading: const Icon(Icons.inventory_2_outlined, color: Colors.cyanAccent),
-                                title: Text(item['nombre'], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                title: Text(item['nombre']?.toString() ?? '', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                                 subtitle: Text(
                                   item['descripcion']?.toString().isNotEmpty == true 
-                                      ? item['descripcion'] 
+                                      ? item['descripcion'].toString() 
                                       : 'Sin descripción adicional', 
-                                  style: const TextStyle(color: Colors.white54)
+                                      style: const TextStyle(color: Colors.white54)
                                 ),
-                                trailing: IconButton(
-                                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                                  onPressed: () async {
-                                    await _supabase.from('elemento_fisico').delete().eq('id_elemento', item['id_elemento']);
-                                    _cargarElementos();
-                                  },
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.qr_code_2, color: Colors.cyanAccent),
+                                      onPressed: () => _mostrarDialogoQR(item),
+                                      tooltip: 'Ver y Descargar QR',
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                                      onPressed: () async {
+                                        await _supabase.from('elemento_fisico').delete().eq('id_elemento', item['id_elemento']);
+                                        _cargarElementos();
+                                      },
+                                    ),
+                                  ],
                                 ),
                               ),
                             );
@@ -194,5 +322,4 @@ class _PantallaElementosFisicosState extends State<PantallaElementosFisicos> {
       ),
     );
   }
-  
 }
