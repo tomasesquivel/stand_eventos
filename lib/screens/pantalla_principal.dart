@@ -1,96 +1,122 @@
 import 'package:flutter/material.dart';
-import 'pantalla_admin.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'pantalla_ingreso_alias.dart';
-class PantallaPrincipal extends StatelessWidget {
+import 'pantalla_escaner_qr.dart';
+import '../utils/sesion_local.dart';
+
+class PantallaPrincipal extends StatefulWidget {
   const PantallaPrincipal({super.key});
 
-  // Simula la lectura de la cámara (Botón gigante)
-  void _simularEscaneoQR(BuildContext context) {
+  @override
+  State<PantallaPrincipal> createState() => _PantallaPrincipalState();
+}
+
+class _PantallaPrincipalState extends State<PantallaPrincipal> {
+  final supabase = Supabase.instance.client;
+
+  // --- MOTOR DE VALIDACIÓN CON BASE DE DATOS ---
+  Future<void> _validarAcceso(String codigo) async {
+    // 1. Mostramos un círculo de carga mientras consultamos a Supabase
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF1A1A1A),
-          title: const Text('Simulador de Cámara', style: TextStyle(color: Colors.cyan)),
-          content: const Text('¿Qué código detectó la cámara?'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Error: Código QR inválido o stand inactivo.'),
-                    backgroundColor: Colors.redAccent,
-                    duration: Duration(seconds: 3),
-                  ),
-                );
-              },
-              child: const Text('Simular QR Inválido', style: TextStyle(color: Colors.red)),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                if (!context.mounted) return;
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const PantallaIngresoAlias()),
-                );
-              },
-              child: const Text('Simular QR Válido', style: TextStyle(color: Colors.greenAccent)),
-            ),
-          ],
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator(color: Colors.cyanAccent)),
+    );
+
+    try {
+      final codigoLimpio = codigo.trim();
+      
+      // Verificamos si escaneó un QR (UUID) o si tipeó a mano (Código corto)
+      final esUuid = RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', caseSensitive: false).hasMatch(codigoLimpio);
+
+      // Consulta a la tabla stand
+      final query = supabase.from('stand').select('id_stand, activo');
+      final respuesta = await (esUuid 
+          ? query.eq('id_stand', codigoLimpio).maybeSingle()
+          : query.eq('codigo_corto', codigoLimpio.toUpperCase()).maybeSingle());
+
+      if (!mounted) return;
+      Navigator.pop(context); // Ocultamos el círculo de carga
+
+      if (respuesta == null) {
+        _mostrarError('Error: Código de stand incorrecto o no existe.');
+      } else if (respuesta['activo'] == false) {
+        _mostrarError('Error: El stand se encuentra inactivo en este momento.');
+      } else {
+        // Guardamos el ID del stand en RAM y avanzamos
+        SesionLocal.idStandActual = respuesta['id_stand'].toString();
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const PantallaIngresoAlias()),
         );
-      },
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // Ocultamos el círculo de carga
+      _mostrarError('Error de conexión con el servidor.');
+    }
+  }
+
+  void _mostrarError(String mensaje) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensaje, style: const TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.redAccent,
+        duration: const Duration(seconds: 3),
+      ),
     );
   }
 
-  // Simula el ingreso manual por teclado
-  void _simularIngresoManual(BuildContext context) {
+  // --- REEMPLAZO DEL SIMULADOR QR ---
+  Future<void> _abrirEscanerQR() async {
+    // Abre la cámara real reutilizando tu pantalla existente
+    final String? codigoEscaneado = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const PantallaEscanerQr()),
+    );
+
+    // Si detectó un código (y no volvieron para atrás), lo validamos
+    if (codigoEscaneado != null && codigoEscaneado.trim().isNotEmpty) {
+      await _validarAcceso(codigoEscaneado);
+    }
+  }
+
+  // --- REEMPLAZO DEL SIMULADOR MANUAL ---
+  void _abrirIngresoManual() {
     final TextEditingController codigoController = TextEditingController();
 
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return AlertDialog(
           backgroundColor: const Color(0xFF1A1A1A),
           title: const Text('Ingreso Manual', style: TextStyle(color: Colors.cyan)),
           content: TextField(
             controller: codigoController,
-            style: const TextStyle(color: Colors.white),
+            style: const TextStyle(color: Colors.white, fontSize: 18, letterSpacing: 2),
+            textCapitalization: TextCapitalization.characters,
+            maxLength: 6, // Limitamos a 6 caracteres
             decoration: const InputDecoration(
-              hintText: 'Código del stand (Ej: ALPHA-01)',
-              hintStyle: TextStyle(color: Colors.grey),
+              hintText: 'Ej: EXPO24',
+              hintStyle: TextStyle(color: Colors.grey, letterSpacing: 1),
+              counterText: '',
               enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.cyan)),
               focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.cyanAccent)),
             ),
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
             ),
             TextButton(
               onPressed: () {
-                Navigator.pop(context);
-                if (!context.mounted) return;
-                // Validamos un código de prueba (ALPHA-01)
-                if (codigoController.text.trim().toUpperCase() == 'ALPHA-01') {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const PantallaIngresoAlias()),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Error: Código de stand incorrecto o inactivo.'),
-                      backgroundColor: Colors.redAccent,
-                      duration: Duration(seconds: 3),
-                    ),
-                  );
+                Navigator.pop(dialogContext); // Cerramos el popup de texto
+                if (codigoController.text.trim().isNotEmpty) {
+                  _validarAcceso(codigoController.text.trim()); // Validamos con DB
                 }
               },
-              child: const Text('Validar', style: TextStyle(color: Colors.cyanAccent)),
+              child: const Text('Validar', style: TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold)),
             ),
           ],
         );
@@ -104,12 +130,7 @@ class PantallaPrincipal extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.admin_panel_settings, color: Colors.white24),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const PantallaAdmin())),
-          )
-        ],
+        iconTheme: const IconThemeData(color: Colors.cyanAccent),
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -139,9 +160,9 @@ class PantallaPrincipal extends StatelessWidget {
               ),
               const SizedBox(height: 50),
               
-              // BOTÓN GIGANTE DEL ESCÁNER
+              // BOTÓN GIGANTE CONECTADO AL ESCÁNER REAL
               GestureDetector(
-                onTap: () => _simularEscaneoQR(context),
+                onTap: _abrirEscanerQR,
                 child: Container(
                   width: 240,
                   height: 240,
@@ -172,13 +193,13 @@ class PantallaPrincipal extends StatelessWidget {
               const SizedBox(height: 10),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 40),
-                child: Text('Escanea el código QR de inicio de sala para iniciar el descifrado', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 14)),
+                child: Text('Escanea el código QR maestro del stand para iniciar el enlace', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 14)),
               ),
               const SizedBox(height: 40),
               
-              // BOTÓN INGRESO MANUAL
+              // BOTÓN CONECTADO AL INGRESO MANUAL REAL
               OutlinedButton.icon(
-                onPressed: () => _simularIngresoManual(context), // <-- Conectado al nuevo simulador
+                onPressed: _abrirIngresoManual,
                 icon: const Icon(Icons.keyboard, color: Colors.grey),
                 label: const Text('Ingresar Código Manual', style: TextStyle(color: Colors.grey)),
                 style: OutlinedButton.styleFrom(

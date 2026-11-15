@@ -6,6 +6,7 @@ import 'pantalla_tiempo_agotado.dart';
 import 'pantalla_mision_completada.dart';
 import '../widgets/barra_progreso_escape.dart';
 import '../widgets/tarjeta_pista_ayuda.dart';
+import 'pantalla_escaner_qr.dart';
 import '../utils/sesion_local.dart';   
 
 class PantallaJuego extends StatefulWidget {
@@ -250,35 +251,23 @@ class _PantallaJuegoState extends State<PantallaJuego> {
     });
   }
 
-  void _simularEscaneoQR(BuildContext context) {
+Future<void> _abrirEscanerQR(BuildContext context) async {
     if (_desafioActual == null) return;
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF1A1A1A),
-          title: const Text('Simulador de Cámara QR', style: TextStyle(color: Colors.cyan)),
-          content: const Text('Selecciona qué lectura querés simular para este elemento físico:'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-                _verificarCodigoElementoFisico('CODIGO_ERRONEO_SIMULADO');
-              },
-              child: const Text('QR Inválido', style: TextStyle(color: Colors.redAccent)),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-                final String qrCorrecto = _desafioActual!['respuesta_correcta'].toString();
-                _verificarCodigoElementoFisico(qrCorrecto);
-              },
-              child: const Text('QR Válido', style: TextStyle(color: Colors.greenAccent)),
-            ),
-          ],
-        );
-      },
+    
+    // Pausamos el teclado y focos
+    FocusScope.of(context).unfocus();
+
+    // Navegamos a la pantalla de la cámara esperando que nos devuelva un String
+    final String? codigoEscaneado = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const PantallaEscanerQr()),
     );
+
+    // Si el usuario volvió para atrás (no escaneó nada), no hacemos nada
+    if (codigoEscaneado == null || codigoEscaneado.trim().isEmpty) return;
+
+    // Si detectó un código, lo validamos con la misma función que ya tenés
+    _verificarCodigoElementoFisico(codigoEscaneado);
   }
 
   @override
@@ -502,7 +491,7 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                                       width: double.infinity,
                                       height: 60,
                                       child: ElevatedButton.icon(
-                                        onPressed: _exitoActivo ? null : () => _simularEscaneoQR(context),
+                                        onPressed: _exitoActivo ? null : () => _abrirEscanerQR(context),
                                         icon: Icon(_exitoActivo ? Icons.check_circle : Icons.qr_code_scanner, size: 28),
                                         label: Text(
                                           _exitoActivo ? 'CÓDIGO VERIFICADO' : 'ESCANEAR CÓDIGO QR',

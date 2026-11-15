@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'screens/pantalla_principal.dart';
+import 'package:stand_eventos/screens/landing_screen.dart';
 
 
 Future<void> main() async {
@@ -29,7 +29,7 @@ class StandEventosApp extends StatelessWidget {
         ),
         fontFamily: 'Courier',
       ),
-      home: const PantallaPrincipal(),
+      home: const LandingScreen(),
     );
   }
 }

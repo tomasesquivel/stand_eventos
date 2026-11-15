@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../utils/sesion_local.dart';
 import 'pantalla_juego.dart';
+import 'landing_screen.dart';
 
 class PantallaCatalogo extends StatefulWidget {
   const PantallaCatalogo({super.key});
@@ -22,13 +23,25 @@ class _PantallaCatalogoState extends State<PantallaCatalogo> {
     _cargarExperienciasActivas();
   }
 
-  // Carga solo las experiencias que el admin marcó como activas
+  // TICKET ADM22: Carga solo las experiencias vinculadas al stand escaneado
   Future<void> _cargarExperienciasActivas() async {
+    final String? idStand = SesionLocal.idStandActual;
+
+    if (idStand == null) {
+      if (!mounted) return;
+      setState(() {
+        _mensajeError = 'ERROR DE ENLACE: No se detectó un stand activo en la memoria.';
+        _isLoading = false;
+      });
+      return;
+    }
+
     try {
       final data = await supabase
           .from('experiencia')
           .select()
           .eq('activa', true)
+          .eq('id_stand', idStand) // <-- EL FILTRO MULTI-TENANT CLAVE
           .order('id_experiencia', ascending: true);
 
       if (!mounted) return;
@@ -45,9 +58,17 @@ class _PantallaCatalogoState extends State<PantallaCatalogo> {
     }
   }
 
+  void _desconectarSistema() {
+    SesionLocal.desconectarStand();
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => const LandingScreen()),
+      (route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Leemos el alias de la memoria RAM (o ponemos 'INVITADO' por si entraron directo)
     final String alias = SesionLocal.aliasJugador ?? 'INVITADO';
 
     return Scaffold(
@@ -56,10 +77,18 @@ class _PantallaCatalogoState extends State<PantallaCatalogo> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
+        automaticallyImplyLeading: false, // Quitamos la flecha de volver por seguridad
         title: const Text(
           'CATÁLOGO DE MISIONES',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 2),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.power_settings_new, color: Colors.redAccent),
+            onPressed: _desconectarSistema,
+            tooltip: 'Desconectar',
+          )
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(30),
           child: Padding(
@@ -77,10 +106,22 @@ class _PantallaCatalogoState extends State<PantallaCatalogo> {
               ? Center(
                   child: Padding(
                     padding: const EdgeInsets.all(24.0),
-                    child: Text(
-                      _mensajeError!,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.redAccent),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline, color: Colors.redAccent, size: 60),
+                        const SizedBox(height: 16),
+                        Text(
+                          _mensajeError!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: _desconectarSistema,
+                          child: const Text('REINICIAR CONEXIÓN'),
+                        )
+                      ],
                     ),
                   ),
                 )
@@ -96,8 +137,6 @@ class _PantallaCatalogoState extends State<PantallaCatalogo> {
                       itemCount: _experiencias.length,
                       itemBuilder: (context, index) {
                         final exp = _experiencias[index];
-                        
-                        // GAM02: Verificamos en la RAM si el ID de esta misión ya se ganó
                         final String idExp = exp['id_experiencia'].toString();
                         final bool yaCompletada = SesionLocal.misionesCompletadas.contains(idExp);
 
@@ -107,7 +146,6 @@ class _PantallaCatalogoState extends State<PantallaCatalogo> {
                           decoration: BoxDecoration(
                             color: const Color(0xFF1A1A1A),
                             border: Border.all(
-                              // Si ya la ganó, el borde se pone verde; si no, queda cyan
                               color: yaCompletada ? Colors.greenAccent : Colors.cyan,
                               width: 1.5,
                             ),
@@ -162,19 +200,15 @@ class _PantallaCatalogoState extends State<PantallaCatalogo> {
                                 width: double.infinity,
                                 height: 50,
                                 child: ElevatedButton(
-                                  // GAM02 (Criterio 3): Si ya está completada, el botón se bloquea (onPressed en null)
                                   onPressed: yaCompletada
                                       ? null
                                       : () {
-                                          // Navega al motor del juego pasándole los datos de la experiencia
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
                                               builder: (context) => PantallaJuego(experiencia: exp),
                                             ),
                                           ).then((_) {
-                                            // Cuando vuelve del juego (gane o pierda), recarga la pantalla 
-                                            // para actualizar el estado del botón a verde si corresponde.
                                             setState(() {});
                                           });
                                         },

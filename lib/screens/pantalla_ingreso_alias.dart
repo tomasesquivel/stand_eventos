@@ -16,7 +16,7 @@ class _PantallaIngresoAliasState extends State<PantallaIngresoAlias> {
   @override
   void initState() {
     super.initState();
-    SesionLocal.reiniciarSesion();
+    SesionLocal.reiniciarJugador();
   }
 
   void _ingresarAlSistema() {
