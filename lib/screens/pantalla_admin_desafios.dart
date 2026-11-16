@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
+
 
 class PantallaAdminDesafios extends StatefulWidget {
   final Map<String, dynamic> experiencia;
@@ -13,8 +15,12 @@ class PantallaAdminDesafios extends StatefulWidget {
 class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
   final supabase = Supabase.instance.client;
   List<dynamic> _desafios = [];
-  List<dynamic> _elementosDisponibles = []; // Nueva lista para almacenar los objetos físicos
+  List<dynamic> _elementosDisponibles = []; // Lista para almacenar los objetos físicos
   bool _isLoading = true;
+
+// Clave de API de Gemini (Google Generative AI)
+  static const String _geminiApiKey = String.fromEnvironment('GEMINI_API_KEY');
+
 
   @override
   void initState() {
@@ -22,12 +28,12 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
     _cargarDatos();
   }
 
-  // Criterio 1: Carga combinada de desafíos y elementos físicos
+  // Carga combinada de desafíos y elementos físicos
   Future<void> _cargarDatos() async {
     try {
       final dataDesafios = await supabase
           .from('desafio')
-          .select('*, pista(*), elemento_fisico(nombre, codigo_qr)') // Traemos info del elemento asociado
+          .select('*, pista(*), elemento_fisico(nombre, codigo_qr)')
           .eq('id_experiencia', widget.experiencia['id_experiencia'])
           .order('orden_resolucion', ascending: true);
 
@@ -37,6 +43,7 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
           .eq('id_experiencia', widget.experiencia['id_experiencia'])
           .order('nombre', ascending: true);
 
+      if (!mounted) return;
       setState(() {
         _desafios = dataDesafios;
         _elementosDisponibles = dataElementos;
@@ -46,6 +53,202 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
+  }
+
+  // ADM25: Modal del Asistente Creativo con IA (Gemini)
+  Future<void> _abrirModalGeneradorIA({
+    required TextEditingController controladorDescripcion,
+    required TextEditingController controladorRespuesta,
+    required String tipoDesafio,
+    int? idElementoSeleccionado,
+  }) async {
+    // Pre-cargamos el nombre de la misión como sugerencia de temática
+    final TextEditingController tematicaCtrl = TextEditingController(
+      text: widget.experiencia['nombre']?.toString() ?? '',
+    );
+
+    // Si es desafío QR y hay un objeto elegido, sugerimos el nombre del objeto (ej: "Caja Fuerte").
+    // Si es de texto, pre-cargamos la respuesta escrita hasta el momento.
+    String sugerenciaObjetivo = '';
+    if (tipoDesafio == 'qr' && idElementoSeleccionado != null) {
+      final el = _elementosDisponibles.firstWhere(
+        (e) => e['id_elemento'] == idElementoSeleccionado,
+        orElse: () => null,
+      );
+      if (el != null) sugerenciaObjetivo = el['nombre'].toString();
+    } else if (tipoDesafio == 'texto') {
+      sugerenciaObjetivo = controladorRespuesta.text;
+    }
+
+    final TextEditingController respuestaIaCtrl = TextEditingController(
+      text: sugerenciaObjetivo,
+    );
+    bool cargandoIA = false;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogIaContext) {
+        return StatefulBuilder(
+          builder: (ctx, setModalIaState) {
+            return AlertDialog(
+              backgroundColor: const Color(0xFF1A1A1A),
+              shape: RoundedRectangleBorder(
+                side: const BorderSide(color: Colors.amberAccent, width: 1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              title: const Row(
+                children: [
+                  Icon(Icons.auto_awesome, color: Colors.amberAccent),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Generador de Acertijos IA',
+                      style: TextStyle(color: Colors.amberAccent, fontSize: 18),
+                    ),
+                  ),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Indicá la temática y la respuesta (o el objeto a buscar). Gemini redactará el acertijo sin mencionar la palabra clave.',
+                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: tematicaCtrl,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(
+                        labelText: 'Temática (Ej: Piratas, Cyberpunk)',
+                        labelStyle: TextStyle(color: Colors.grey),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.white24),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.amberAccent),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: respuestaIaCtrl,
+                      style: const TextStyle(color: Colors.white),
+                      textCapitalization: TextCapitalization.characters,
+                      decoration: InputDecoration(
+                        labelText: tipoDesafio == 'qr'
+                            ? 'Objeto a encontrar (Ej: RELOJ)'
+                            : 'Respuesta esperada (Ej: FUEGO)',
+                        labelStyle: const TextStyle(color: Colors.grey),
+                        enabledBorder: const OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.white24),
+                        ),
+                        focusedBorder: const OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.amberAccent),
+                        ),
+                      ),
+                    ),
+                    if (cargandoIA) ...[
+                      const SizedBox(height: 20),
+                      const CircularProgressIndicator(color: Colors.amberAccent),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Redactando acertijo con Gemini...',
+                        style: TextStyle(color: Colors.amberAccent, fontSize: 12),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: cargandoIA ? null : () => Navigator.pop(dialogIaContext),
+                  child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+                ),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.amberAccent,
+                    foregroundColor: Colors.black,
+                  ),
+                  onPressed: cargandoIA
+                      ? null
+                      : () async {
+                          final tematica = tematicaCtrl.text.trim();
+                          final respuesta = respuestaIaCtrl.text.trim();
+
+                          if (tematica.isEmpty || respuesta.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Completá tanto la temática como la respuesta.'),
+                                backgroundColor: Colors.redAccent,
+                              ),
+                            );
+                            return;
+                          }
+
+                          setModalIaState(() => cargandoIA = true);
+
+                          try {
+                            final prompt = '''
+                            Actúa como un diseñador experto de juegos de Escape Room.
+                            Redacta un acertijo breve, inmersivo y enigmático (máximo 3 oraciones) ambientado en la temática: "$tematica".
+                            La respuesta exacta o el objeto que el jugador debe deducir es: "$respuesta".
+
+                            REGLAS ESTRICTAS:
+                            1. PROHIBIDO incluir la palabra "$respuesta" (ni variaciones directas de la misma) dentro del texto del acertijo.
+                            2. Devuelve ÚNICAMENTE el texto del acertijo listo para mostrar al jugador, sin saludos, sin introducciones, sin comillas y sin explicaciones adicionales.
+                            ''';
+
+                            final model = GenerativeModel(
+                              model: 'gemini-3-flash-preview',
+                              apiKey: _geminiApiKey,
+                            );
+
+                            final response = await model
+                                .generateContent([Content.text(prompt)])
+                                .timeout(const Duration(seconds: 10));
+
+                            final textoGenerado = response.text?.trim();
+
+                            if (!mounted || !dialogIaContext.mounted) return;
+
+                            if (textoGenerado != null && textoGenerado.isNotEmpty) {
+                              controladorDescripcion.text = textoGenerado;
+                              if (tipoDesafio == 'texto') {
+                                controladorRespuesta.text = respuesta.toUpperCase();
+                              }
+
+                              Navigator.pop(dialogIaContext);
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('¡Acertijo generado! Podés revisarlo y editarlo antes de guardar.'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (!mounted || !dialogIaContext.mounted) return;
+                            setModalIaState(() => cargandoIA = false);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Error al conectar con Gemini: $e'),
+                                backgroundColor: Colors.redAccent,
+                              ),
+                            );
+                          }
+                        },
+                  icon: const Icon(Icons.bolt, size: 18),
+                  label: const Text('Generar', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   void _mostrarModalDesafio({Map<String, dynamic>? desafioAEditar}) {
@@ -73,8 +276,7 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
     }
     final pistaCtrl = TextEditingController(text: pistaExistenteText);
     String tipoSeleccionado = esEdicion ? desafioAEditar['tipo'] : 'texto';
-    
-    // Nueva variable para almacenar el elemento físico seleccionado (Criterio 2)
+
     int? idElementoSeleccionado = esEdicion ? desafioAEditar['id_elemento'] : null;
 
     showDialog(
@@ -104,29 +306,58 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                         style: const TextStyle(color: Colors.white),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) return 'Requerido';
-                          if (int.tryParse(value.trim()) == null) return 'Ingrese un número válido';
+                          final n = int.tryParse(value.trim());
+                          if (n == null || n <= 0) return 'Ingrese un número positivo válido';
                           return null;
                         },
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 14),
+
+                      // ADM25 - Criterio 1: Botón visible de "Generar con IA" en el formulario
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.amberAccent,
+                            side: const BorderSide(color: Colors.amberAccent),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          ),
+                          onPressed: () async {
+                            await _abrirModalGeneradorIA(
+                              controladorDescripcion: descripcionCtrl,
+                              controladorRespuesta: respuestaCtrl,
+                              tipoDesafio: tipoSeleccionado,
+                              idElementoSeleccionado: idElementoSeleccionado,
+                            );
+                            // Refrescamos el modal del desafío por si cambió algún estado visual
+                            setStateModal(() {});
+                          },
+                          icon: const Icon(Icons.auto_awesome, size: 16),
+                          label: const Text(
+                            'Generar con IA',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+
                       TextFormField(
                         controller: descripcionCtrl,
                         decoration: const InputDecoration(
-                          labelText: 'Consigna del desafío',
+                          labelText: 'Descripción / Consigna del desafío',
                           labelStyle: TextStyle(color: Colors.grey),
                           hintText: 'Ej: Busca en el reloj...',
                           hintStyle: TextStyle(color: Colors.white38),
                         ),
                         style: const TextStyle(color: Colors.white),
-                        maxLines: 2,
+                        maxLines: 3,
                         validator: (value) =>
                             value == null || value.trim().isEmpty
                                 ? 'Indica el acertijo de la misión'
                                 : null,
                       ),
                       const SizedBox(height: 10),
-                      
-                      // Criterio 1: Selector de Elementos Físicos
+
+                      // Selector de Elementos Físicos
                       DropdownButtonFormField<int?>(
                         initialValue: idElementoSeleccionado,
                         dropdownColor: const Color(0xFF1A1A1A),
@@ -147,9 +378,17 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                             );
                           }),
                         ],
-                        onChanged: (val) => setStateModal(() => idElementoSeleccionado = val),
+                        onChanged: (val) {
+                          setStateModal(() {
+                            idElementoSeleccionado = val;
+                            // Si ya estaba en modo QR y cambia de objeto, actualizamos el código automáticamente
+                            if (tipoSeleccionado == 'qr' && val != null) {
+                              final el = _elementosDisponibles.firstWhere((e) => e['id_elemento'] == val);
+                              respuestaCtrl.text = el['codigo_qr'] ?? '';
+                            }
+                          });
+                        },
                         validator: (value) {
-                          // Criterio 3: Validación estricta para tipo QR
                           if (tipoSeleccionado == 'qr' && value == null) {
                             return 'Un desafío QR requiere un objeto físico obligatorio.';
                           }
@@ -173,7 +412,6 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                         onChanged: (val) {
                           setStateModal(() {
                             tipoSeleccionado = val!;
-                            // Autocompletado inteligente del ID QR si se selecciona un objeto
                             if (tipoSeleccionado == 'qr' && idElementoSeleccionado != null) {
                               final el = _elementosDisponibles.firstWhere((e) => e['id_elemento'] == idElementoSeleccionado);
                               respuestaCtrl.text = el['codigo_qr'] ?? '';
@@ -188,8 +426,7 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                           labelStyle: const TextStyle(color: Colors.grey),
                         ),
                         style: const TextStyle(color: Colors.white),
-                        // Bloqueamos la edición manual si es un QR para evitar errores
-                        readOnly: tipoSeleccionado == 'qr', 
+                        readOnly: tipoSeleccionado == 'qr',
                         validator: (value) =>
                             value == null || value.trim().isEmpty ? 'La respuesta/código es obligatoria' : null,
                       ),
@@ -203,7 +440,8 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                         style: const TextStyle(color: Colors.white),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) return 'Requerido';
-                          if (int.tryParse(value.trim()) == null) return 'Ingrese un número válido';
+                          final pts = int.tryParse(value.trim());
+                          if (pts == null || pts <= 0) return 'Ingrese un puntaje mayor a 0';
                           return null;
                         },
                       ),
@@ -232,7 +470,6 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                   onPressed: () async {
                     if (!formKey.currentState!.validate()) return;
 
-                    // Validacion Criterio 3 (Seguro doble)
                     if (tipoSeleccionado == 'qr' && idElementoSeleccionado == null) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Debe seleccionar un objeto físico para desafíos QR'), backgroundColor: Colors.red),
@@ -244,14 +481,13 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                     setState(() => _isLoading = true);
 
                     try {
-                      // Criterio 2: Guardamos la vinculación en la BD
                       final datosDesafio = {
                         'orden_resolucion': int.parse(ordenCtrl.text.trim()),
                         'descripcion': descripcionCtrl.text.trim(),
                         'tipo': tipoSeleccionado,
                         'respuesta_correcta': respuestaCtrl.text.trim(),
                         'puntos_otorgados': int.parse(puntosCtrl.text.trim()),
-                        'id_elemento': idElementoSeleccionado, // Inyectamos el ID
+                        'id_elemento': idElementoSeleccionado,
                       };
 
                       if (esEdicion) {
@@ -365,7 +601,6 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                               'Tipo: ${des['tipo'].toString().toUpperCase()} | Pts: ${des['puntos_otorgados']}',
                               style: const TextStyle(color: Colors.grey),
                             ),
-                            // Mostramos el nombre del objeto vinculado si existe
                             if (des['elemento_fisico'] != null)
                               Padding(
                                 padding: const EdgeInsets.only(top: 4),

@@ -8,7 +8,6 @@ import '../widgets/barra_progreso_escape.dart';
 import '../widgets/tarjeta_pista_ayuda.dart';
 import 'pantalla_escaner_qr.dart';
 import '../utils/sesion_local.dart';   
-
 class PantallaJuego extends StatefulWidget {
   final Map<String, dynamic> experiencia;
 

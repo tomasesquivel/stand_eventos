@@ -66,6 +66,7 @@ Future<void> _cargarDatosCompletos() async {
     if (_standActual == null) return;
     try {
       await supabase.from('stand').update({'activo': nuevoEstado}).eq('id_stand', _standActual!['id_stand']);
+      if (!mounted) return;
       setState(() => _standActual!['activo'] = nuevoEstado);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

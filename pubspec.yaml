@@ -39,6 +39,7 @@ dependencies:
   pdf: ^3.13.1
   printing: ^5.15.1
   mobile_scanner: ^7.5.0
+  google_generative_ai: ^0.4.7
 
 dev_dependencies:
   flutter_test:
