@@ -13,38 +13,40 @@ class _PantallaLoginAdminState extends State<PantallaLoginAdmin> {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final supabase = Supabase.instance.client;
-  
+
   bool _procesando = false;
   bool _ocultarPassword = true;
 
   Future<void> _iniciarSesion() async {
+    FocusScope.of(context).unfocus();
+
     if (_emailCtrl.text.trim().isEmpty || _passCtrl.text.trim().isEmpty) {
-      _mostrarError('FALTAN CREDENCIALES');
+      _mostrarError('Por favor, ingresa tu correo y contraseña.');
       return;
     }
 
     setState(() => _procesando = true);
 
     try {
-      // Intento de conexión con Supabase Auth
       await supabase.auth.signInWithPassword(
         email: _emailCtrl.text.trim(),
         password: _passCtrl.text.trim(),
       );
 
       if (!mounted) return;
-      
-      // Si el login es exitoso, viaja al Panel de Administración
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const PantallaAdmin()),
       );
     } on AuthException catch (error) {
+      debugPrint('Error de autenticación Supabase: ${error.message}');
       if (!mounted) return;
-      _mostrarError('ACCESO DENEGADO: ${error.message}');
+      _mostrarError('Acceso denegado: Correo o contraseña incorrectos.');
     } catch (e) {
+      debugPrint('Error técnico en login: $e');
       if (!mounted) return;
-      _mostrarError('ERROR DEL SISTEMA: $e');
+      _mostrarError('No se pudo conectar con el servidor. Verifica tu conexión.');
     } finally {
       if (mounted) setState(() => _procesando = false);
     }
@@ -53,7 +55,18 @@ class _PantallaLoginAdminState extends State<PantallaLoginAdmin> {
   void _mostrarError(String mensaje) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(mensaje, style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+        content: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.white),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                mensaje,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
         backgroundColor: Colors.redAccent,
       ),
     );
@@ -81,10 +94,13 @@ class _PantallaLoginAdminState extends State<PantallaLoginAdmin> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.admin_panel_settings, size: 80, color: Colors.cyanAccent),
+              const ExcludeSemantics(
+                child: Icon(Icons.admin_panel_settings, size: 80, color: Colors.cyanAccent),
+              ),
               const SizedBox(height: 30),
               const Text(
                 'ACCESO ORGANIZADOR',
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 22,
@@ -95,6 +111,7 @@ class _PantallaLoginAdminState extends State<PantallaLoginAdmin> {
               const SizedBox(height: 10),
               const Text(
                 'INGRESA TUS CREDENCIALES DE SISTEMA',
+                textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.grey, fontSize: 12, letterSpacing: 1.5),
               ),
               const SizedBox(height: 40),
@@ -104,9 +121,11 @@ class _PantallaLoginAdminState extends State<PantallaLoginAdmin> {
                 controller: _emailCtrl,
                 style: const TextStyle(color: Colors.cyanAccent),
                 keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.email],
                 decoration: InputDecoration(
                   labelText: 'CORREO ELECTRÓNICO',
-                  labelStyle: const TextStyle(color: Colors.grey, letterSpacing: 1.5),
+                  labelStyle: const TextStyle(color: Colors.grey, letterSpacing: 1.2),
                   prefixIcon: const Icon(Icons.email_outlined, color: Colors.cyan),
                   filled: true,
                   fillColor: const Color(0xFF1A1A1A),
@@ -127,11 +146,15 @@ class _PantallaLoginAdminState extends State<PantallaLoginAdmin> {
                 controller: _passCtrl,
                 style: const TextStyle(color: Colors.cyanAccent),
                 obscureText: _ocultarPassword,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _procesando ? null : _iniciarSesion(),
                 decoration: InputDecoration(
                   labelText: 'CÓDIGO DE SEGURIDAD',
-                  labelStyle: const TextStyle(color: Colors.grey, letterSpacing: 1.5),
+                  labelStyle: const TextStyle(color: Colors.grey, letterSpacing: 1.2),
                   prefixIcon: const Icon(Icons.lock_outline, color: Colors.cyan),
                   suffixIcon: IconButton(
+                    // CORRECCIÓN ACCESIBILIDAD #2: Tooltip descriptivo para lectores de pantalla
+                    tooltip: _ocultarPassword ? 'Mostrar contraseña' : 'Ocultar contraseña',
                     icon: Icon(
                       _ocultarPassword ? Icons.visibility_off : Icons.visibility,
                       color: Colors.grey,
@@ -162,8 +185,12 @@ class _PantallaLoginAdminState extends State<PantallaLoginAdmin> {
                 height: 55,
                 child: ElevatedButton.icon(
                   onPressed: _procesando ? null : _iniciarSesion,
-                  icon: _procesando 
-                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
+                  icon: _procesando
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2),
+                        )
                       : const Icon(Icons.login),
                   label: Text(
                     _procesando ? 'VERIFICANDO...' : 'AUTENTICAR',

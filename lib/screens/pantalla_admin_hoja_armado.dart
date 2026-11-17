@@ -37,7 +37,13 @@ class _PantallaAdminHojaArmadoState extends State<PantallaAdminHojaArmado> {
       });
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se pudo cargar la hoja de armado.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
     }
   }
 

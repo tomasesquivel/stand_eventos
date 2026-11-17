@@ -51,7 +51,13 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
       });
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se pudieron cargar los desafíos y elementos físicos.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
     }
   }
 
@@ -233,8 +239,8 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                             if (!mounted || !dialogIaContext.mounted) return;
                             setModalIaState(() => cargandoIA = false);
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Error al conectar con Gemini: $e'),
+                              const SnackBar(
+                                content: Text('No se pudo generar el acertijo. Intenta nuevamente.'),
                                 backgroundColor: Colors.redAccent,
                               ),
                             );
@@ -528,7 +534,10 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                     } catch (e) {
                       if (!mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                        const SnackBar(
+                          content: Text('No se pudo guardar el desafío. Intenta nuevamente.'),
+                          backgroundColor: Colors.redAccent,
+                        ),
                       );
                       setState(() => _isLoading = false);
                     }
@@ -687,7 +696,10 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        const SnackBar(
+          content: Text('No se pudo eliminar el desafío. Intenta nuevamente.'),
+          backgroundColor: Colors.redAccent,
+        ),
       );
       setState(() => _isLoading = false);
     }

@@ -18,7 +18,7 @@ class _PantallaElementosFisicosState extends State<PantallaElementosFisicos> {
   final _supabase = Supabase.instance.client;
   final TextEditingController _nombreCtrl = TextEditingController();
   final TextEditingController _descCtrl = TextEditingController();
-  
+
   List<dynamic> _elementos = [];
   bool _isLoading = true;
 
@@ -36,20 +36,39 @@ class _PantallaElementosFisicosState extends State<PantallaElementosFisicos> {
           .eq('id_experiencia', widget.experiencia['id_experiencia'])
           .order('id_elemento', ascending: true);
 
+      if (!mounted) return;
       setState(() {
         _elementos = data;
         _isLoading = false;
       });
     } catch (e) {
       debugPrint('Error al cargar elementos: $e');
+      if (!mounted) return;
       setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se pudieron cargar los objetos físicos.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
     }
   }
 
   Future<void> _agregarElemento() async {
-    final nombre = _nombreCtrl.text.trim();
-    if (nombre.isEmpty) return;
+    if (_isLoading) return;
 
+    final nombre = _nombreCtrl.text.trim();
+    if (nombre.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Por favor, ingresa el nombre del objeto físico.'),
+          backgroundColor: Colors.orangeAccent,
+        ),
+      );
+      return;
+    }
+
+    FocusScope.of(context).unfocus();
     setState(() => _isLoading = true);
 
     try {
@@ -61,22 +80,83 @@ class _PantallaElementosFisicosState extends State<PantallaElementosFisicos> {
 
       _nombreCtrl.clear();
       _descCtrl.clear();
-      await _cargarElementos(); 
-      
+      await _cargarElementos();
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Elemento registrado con éxito'), backgroundColor: Colors.green),
+          const SnackBar(
+            content: Text('Elemento registrado con éxito'),
+            backgroundColor: Colors.green,
+          ),
         );
       }
     } catch (e) {
-      debugPrint('Error al guardar: $e');
+      debugPrint('Error al guardar elemento: $e');
+      if (!mounted) return;
       setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se pudo registrar el objeto. Intenta nuevamente.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
     }
   }
 
-  Future<void> _generarYDescargarPDF(String nombreElemento, String codigoQr) async {
+  // CORRECCIÓN USABILIDAD Y ACCESIBILIDAD: Confirmación antes de eliminar un objeto físico
+  Future<void> _confirmarEliminarElemento(Map<String, dynamic> item) async {
+    final String nombre = item['nombre']?.toString() ?? 'este objeto';
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: const Text('¿Eliminar objeto físico?', style: TextStyle(color: Colors.redAccent)),
+        content: Text(
+          '¿Estás seguro de que quieres eliminar "$nombre"? Si ya imprimiste su código QR, dejará de funcionar.',
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true || !mounted || _isLoading) return;
+
+    setState(() => _isLoading = true);
+    try {
+      await _supabase.from('elemento_fisico').delete().eq('id_elemento', item['id_elemento']);
+      await _cargarElementos();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Objeto eliminado correctamente.')),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error al eliminar objeto: $e');
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se pudo eliminar el objeto. Intenta nuevamente.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
+
+  Future<void> _generarYDescargarPDF(String nombreElemento, String codigoQr, String? codigoCorto) async {
     final doc = pw.Document();
-    
+
     doc.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
@@ -86,8 +166,8 @@ class _PantallaElementosFisicosState extends State<PantallaElementosFisicos> {
               mainAxisAlignment: pw.MainAxisAlignment.center,
               children: [
                 pw.Text(
-                  nombreElemento.toUpperCase(), 
-                  style: pw.TextStyle(fontSize: 40, fontWeight: pw.FontWeight.bold)
+                  nombreElemento.toUpperCase(),
+                  style: pw.TextStyle(fontSize: 40, fontWeight: pw.FontWeight.bold),
                 ),
                 pw.SizedBox(height: 30),
                 pw.BarcodeWidget(
@@ -98,13 +178,20 @@ class _PantallaElementosFisicosState extends State<PantallaElementosFisicos> {
                 ),
                 pw.SizedBox(height: 30),
                 pw.Text(
-                  'ESCANEA ESTE CODIGO CON LA APP', 
-                  style: pw.TextStyle(fontSize: 20, color: PdfColors.grey700)
+                  'ESCANEA ESTE CÓDIGO CON LA APP',
+                  style: const pw.TextStyle(fontSize: 20, color: PdfColors.grey700),
                 ),
+                if (codigoCorto != null && codigoCorto.isNotEmpty) ...[
+                  pw.SizedBox(height: 15),
+                  pw.Text(
+                    'CÓDIGO MANUAL ALTERNATIVO: $codigoCorto',
+                    style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
+                  ),
+                ],
                 pw.SizedBox(height: 10),
                 pw.Text(
-                  'Codigo interno: $codigoQr', 
-                  style: pw.TextStyle(fontSize: 10, color: PdfColors.grey500)
+                  'ID: $codigoQr',
+                  style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey500),
                 ),
               ],
             ),
@@ -120,71 +207,82 @@ class _PantallaElementosFisicosState extends State<PantallaElementosFisicos> {
   }
 
   void _mostrarDialogoQR(Map<String, dynamic> item) {
-    final String codigoQr = item['codigo_qr']?.toString() ?? 'ERROR-SIN-QR';
+    final codigoQr = item['codigo_qr']?.toString().trim();
+    if (codigoQr == null || codigoQr.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Este objeto no tiene un código QR válido configurado.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    final String codigoCorto = _obtenerCodigoCorto(item);
     final String nombre = item['nombre']?.toString() ?? 'Elemento';
 
-    showGeneralDialog(
+    showDialog(
       context: context,
-      barrierDismissible: true,
-      barrierLabel: 'Cerrar código QR',
-      barrierColor: Colors.black54,
-      pageBuilder: (dialogContext, animation, secondaryAnimation) {
-        return SafeArea(
-          child: Center(
-            child: Material(
-              color: const Color(0xFF1A1A1A),
-              child: SizedBox(
-                width: 320,
-                height: 440,
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    children: [
-                      Text(
-                        'CÓDIGO QR - $nombre',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.cyanAccent),
-                      ),
-                      const SizedBox(height: 24),
-                      SizedBox(
-                        width: 232,
-                        height: 232,
-                        child: Container(
-                          color: Colors.white,
-                          padding: const EdgeInsets.all(16),
-                          child: QrImageView(
-                            data: codigoQr,
-                            version: QrVersions.auto,
-                            size: 200,
-                            backgroundColor: Colors.white,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.pop(dialogContext);
-                            _generarYDescargarPDF(nombre, codigoQr);
-                          },
-                          icon: const Icon(Icons.picture_as_pdf, color: Colors.black),
-                          label: const Text(
-                            'DESCARGAR PDF',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.cyan,
-                            padding: const EdgeInsets.symmetric(vertical: 15),
-                          ),
-                        ),
-                      ),
-                    ],
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1A1A1A),
+          shape: RoundedRectangleBorder(
+            side: const BorderSide(color: Colors.cyanAccent, width: 1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          content: SizedBox(
+            width: 320,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'CÓDIGO QR - $nombre',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold),
                   ),
-                ),
+                  const SizedBox(height: 20),
+                  Container(
+                    color: Colors.white,
+                    padding: const EdgeInsets.all(16),
+                    child: QrImageView(
+                      data: codigoQr,
+                      version: QrVersions.auto,
+                      size: 200,
+                      backgroundColor: Colors.white,
+                    ),
+                  ),
+                  if (codigoCorto.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      'CÓDIGO CORTO: $codigoCorto',
+                      style: const TextStyle(
+                        color: Colors.amberAccent,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: 300,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(dialogContext);
+                        _generarYDescargarPDF(nombre, codigoQr, codigoCorto);
+                      },
+                      icon: const Icon(Icons.picture_as_pdf, color: Colors.black),
+                      label: const Text(
+                        'DESCARGAR PDF',
+                        style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.cyan,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -198,6 +296,17 @@ class _PantallaElementosFisicosState extends State<PantallaElementosFisicos> {
     _nombreCtrl.dispose();
     _descCtrl.dispose();
     super.dispose();
+  }
+
+  // Toma el codigo_corto si existe en la BD, o genera uno de 5 caracteres desde el codigo_qr
+  String _obtenerCodigoCorto(Map<String, dynamic> item) {
+    final cortoBD = item['codigo_corto']?.toString().trim();
+    if (cortoBD != null && cortoBD.isNotEmpty) {
+      return cortoBD.toUpperCase();
+    }
+    final qr = item['codigo_qr']?.toString().trim() ?? '';
+    final limpio = qr.replaceAll('-', '').toUpperCase();
+    return limpio.length >= 5 ? limpio.substring(0, 5) : limpio;
   }
 
   @override
@@ -220,7 +329,7 @@ class _PantallaElementosFisicosState extends State<PantallaElementosFisicos> {
               style: TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold, letterSpacing: 1.5),
             ),
             const SizedBox(height: 16),
-            
+
             TextField(
               controller: _nombreCtrl,
               style: const TextStyle(color: Colors.white),
@@ -255,45 +364,55 @@ class _PantallaElementosFisicosState extends State<PantallaElementosFisicos> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton.icon(
-                onPressed: _agregarElemento,
+                onPressed: _isLoading ? null : _agregarElemento,
                 icon: const Icon(Icons.add, color: Colors.black),
-                label: const Text('AGREGAR ELEMENTO', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                label: const Text(
+                  'AGREGAR ELEMENTO',
+                  style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.cyan,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 32),
             const Text(
               'OBJETOS VINCULADOS',
               style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, letterSpacing: 1.5),
             ),
             const Divider(color: Colors.white24),
-            
-            // EL EXPANDED PROTEGIDO
+
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator(color: Colors.cyan))
                   : _elementos.isEmpty
                       ? const Center(
-                          child: Text('No hay elementos físicos registrados.', style: TextStyle(color: Colors.grey)))
+                          child: Text(
+                            'No hay elementos físicos registrados.',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        )
                       : ListView.builder(
                           itemCount: _elementos.length,
                           itemBuilder: (context, index) {
                             final item = _elementos[index];
+                            final String nombreObj = item['nombre']?.toString() ?? 'Objeto';
                             return Card(
                               color: const Color(0xFF1A1A1A),
                               margin: const EdgeInsets.only(bottom: 12),
                               child: ListTile(
                                 leading: const Icon(Icons.inventory_2_outlined, color: Colors.cyanAccent),
-                                title: Text(item['nombre']?.toString() ?? '', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                title: Text(
+                                  nombreObj,
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                ),
                                 subtitle: Text(
-                                  item['descripcion']?.toString().isNotEmpty == true 
-                                      ? item['descripcion'].toString() 
-                                      : 'Sin descripción adicional', 
-                                      style: const TextStyle(color: Colors.white54)
+                                  item['descripcion']?.toString().isNotEmpty == true
+                                      ? item['descripcion'].toString()
+                                      : 'Sin descripción adicional',
+                                  style: const TextStyle(color: Colors.white54),
                                 ),
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -301,14 +420,12 @@ class _PantallaElementosFisicosState extends State<PantallaElementosFisicos> {
                                     IconButton(
                                       icon: const Icon(Icons.qr_code_2, color: Colors.cyanAccent),
                                       onPressed: () => _mostrarDialogoQR(item),
-                                      tooltip: 'Ver y Descargar QR',
+                                      tooltip: 'Ver y descargar QR de $nombreObj',
                                     ),
                                     IconButton(
                                       icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                                      onPressed: () async {
-                                        await _supabase.from('elemento_fisico').delete().eq('id_elemento', item['id_elemento']);
-                                        _cargarElementos();
-                                      },
+                                      tooltip: 'Eliminar $nombreObj',
+                                      onPressed: _isLoading ? null : () => _confirmarEliminarElemento(item),
                                     ),
                                   ],
                                 ),
