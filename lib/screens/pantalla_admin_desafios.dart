@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 
-
 class PantallaAdminDesafios extends StatefulWidget {
   final Map<String, dynamic> experiencia;
 
@@ -15,12 +14,12 @@ class PantallaAdminDesafios extends StatefulWidget {
 class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
   final supabase = Supabase.instance.client;
   List<dynamic> _desafios = [];
-  List<dynamic> _elementosDisponibles = []; // Lista para almacenar los objetos físicos
+  List<dynamic> _elementosDisponibles =
+      []; // Lista para almacenar los objetos físicos
   bool _isLoading = true;
 
-// Clave de API de Gemini (Google Generative AI)
+  // Clave de API de Gemini (Google Generative AI)
   static const String _geminiApiKey = String.fromEnvironment('GEMINI_API_KEY');
-
 
   @override
   void initState() {
@@ -54,7 +53,9 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('No se pudieron cargar los desafíos y elementos físicos.'),
+          content: Text(
+            'No se pudieron cargar los desafíos y elementos físicos.',
+          ),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -158,11 +159,16 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                     ),
                     if (cargandoIA) ...[
                       const SizedBox(height: 20),
-                      const CircularProgressIndicator(color: Colors.amberAccent),
+                      const CircularProgressIndicator(
+                        color: Colors.amberAccent,
+                      ),
                       const SizedBox(height: 8),
                       const Text(
                         'Redactando acertijo con Gemini...',
-                        style: TextStyle(color: Colors.amberAccent, fontSize: 12),
+                        style: TextStyle(
+                          color: Colors.amberAccent,
+                          fontSize: 12,
+                        ),
                       ),
                     ],
                   ],
@@ -170,8 +176,13 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
               ),
               actions: [
                 TextButton(
-                  onPressed: cargandoIA ? null : () => Navigator.pop(dialogIaContext),
-                  child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+                  onPressed: cargandoIA
+                      ? null
+                      : () => Navigator.pop(dialogIaContext),
+                  child: const Text(
+                    'Cancelar',
+                    style: TextStyle(color: Colors.grey),
+                  ),
                 ),
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
@@ -187,7 +198,9 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                           if (tematica.isEmpty || respuesta.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Completá tanto la temática como la respuesta.'),
+                                content: Text(
+                                  'Completá tanto la temática como la respuesta.',
+                                ),
                                 backgroundColor: Colors.redAccent,
                               ),
                             );
@@ -197,7 +210,8 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                           setModalIaState(() => cargandoIA = true);
 
                           try {
-                            final prompt = '''
+                            final prompt =
+                                '''
                             Actúa como un diseñador experto de juegos de Escape Room.
                             Redacta un acertijo breve, inmersivo y enigmático (máximo 3 oraciones) ambientado en la temática: "$tematica".
                             La respuesta exacta o el objeto que el jugador debe deducir es: "$respuesta".
@@ -220,17 +234,21 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
 
                             if (!mounted || !dialogIaContext.mounted) return;
 
-                            if (textoGenerado != null && textoGenerado.isNotEmpty) {
+                            if (textoGenerado != null &&
+                                textoGenerado.isNotEmpty) {
                               controladorDescripcion.text = textoGenerado;
                               if (tipoDesafio == 'texto') {
-                                controladorRespuesta.text = respuesta.toUpperCase();
+                                controladorRespuesta.text = respuesta
+                                    .toUpperCase();
                               }
 
                               Navigator.pop(dialogIaContext);
 
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('¡Acertijo generado! Podés revisarlo y editarlo antes de guardar.'),
+                                  content: Text(
+                                    '¡Acertijo generado! Podés revisarlo y editarlo antes de guardar.',
+                                  ),
                                   backgroundColor: Colors.green,
                                 ),
                               );
@@ -240,14 +258,19 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                             setModalIaState(() => cargandoIA = false);
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('No se pudo generar el acertijo. Intenta nuevamente.'),
+                                content: Text(
+                                  'No se pudo generar el acertijo. Intenta nuevamente.',
+                                ),
                                 backgroundColor: Colors.redAccent,
                               ),
                             );
                           }
                         },
                   icon: const Icon(Icons.bolt, size: 18),
-                  label: const Text('Generar', style: TextStyle(fontWeight: FontWeight.bold)),
+                  label: const Text(
+                    'Generar',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
               ],
             );
@@ -262,7 +285,9 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
     final bool esEdicion = desafioAEditar != null;
 
     final ordenCtrl = TextEditingController(
-      text: esEdicion ? desafioAEditar['orden_resolucion'].toString() : (_desafios.length + 1).toString(),
+      text: esEdicion
+          ? desafioAEditar['orden_resolucion'].toString()
+          : (_desafios.length + 1).toString(),
     );
     final descripcionCtrl = TextEditingController(
       text: esEdicion ? (desafioAEditar['descripcion'] ?? '') : '',
@@ -276,14 +301,18 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
 
     String pistaExistenteText = '';
     String? idPistaExistente;
-    if (esEdicion && desafioAEditar['pista'] != null && (desafioAEditar['pista'] as List).isNotEmpty) {
+    if (esEdicion &&
+        desafioAEditar['pista'] != null &&
+        (desafioAEditar['pista'] as List).isNotEmpty) {
       pistaExistenteText = (desafioAEditar['pista'] as List)[0]['texto_ayuda'];
       idPistaExistente = (desafioAEditar['pista'] as List)[0]['id_pista'];
     }
     final pistaCtrl = TextEditingController(text: pistaExistenteText);
     String tipoSeleccionado = esEdicion ? desafioAEditar['tipo'] : 'texto';
 
-    int? idElementoSeleccionado = esEdicion ? desafioAEditar['id_elemento'] : null;
+    int? idElementoSeleccionado = esEdicion
+        ? desafioAEditar['id_elemento']
+        : null;
 
     showDialog(
       context: context,
@@ -311,9 +340,13 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                         ),
                         style: const TextStyle(color: Colors.white),
                         validator: (value) {
-                          if (value == null || value.trim().isEmpty) return 'Requerido';
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Requerido';
+                          }
                           final n = int.tryParse(value.trim());
-                          if (n == null || n <= 0) return 'Ingrese un número positivo válido';
+                          if (n == null || n <= 0) {
+                            return 'Ingrese un número positivo válido';
+                          }
                           return null;
                         },
                       ),
@@ -326,7 +359,10 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.amberAccent,
                             side: const BorderSide(color: Colors.amberAccent),
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
                           ),
                           onPressed: () async {
                             await _abrirModalGeneradorIA(
@@ -341,7 +377,10 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                           icon: const Icon(Icons.auto_awesome, size: 16),
                           label: const Text(
                             'Generar con IA',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
@@ -358,8 +397,8 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                         maxLines: 3,
                         validator: (value) =>
                             value == null || value.trim().isEmpty
-                                ? 'Indica el acertijo de la misión'
-                                : null,
+                            ? 'Indica el acertijo de la misión'
+                            : null,
                       ),
                       const SizedBox(height: 10),
 
@@ -389,7 +428,9 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                             idElementoSeleccionado = val;
                             // Si ya estaba en modo QR y cambia de objeto, actualizamos el código automáticamente
                             if (tipoSeleccionado == 'qr' && val != null) {
-                              final el = _elementosDisponibles.firstWhere((e) => e['id_elemento'] == val);
+                              final el = _elementosDisponibles.firstWhere(
+                                (e) => e['id_elemento'] == val,
+                              );
                               respuestaCtrl.text = el['codigo_qr'] ?? '';
                             }
                           });
@@ -412,14 +453,24 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                           labelStyle: TextStyle(color: Colors.grey),
                         ),
                         items: const [
-                          DropdownMenuItem(value: 'texto', child: Text('Ingreso de Palabra Clave')),
-                          DropdownMenuItem(value: 'qr', child: Text('Escaneo QR físico')),
+                          DropdownMenuItem(
+                            value: 'texto',
+                            child: Text('Ingreso de Palabra Clave'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'qr',
+                            child: Text('Escaneo QR físico'),
+                          ),
                         ],
                         onChanged: (val) {
                           setStateModal(() {
                             tipoSeleccionado = val!;
-                            if (tipoSeleccionado == 'qr' && idElementoSeleccionado != null) {
-                              final el = _elementosDisponibles.firstWhere((e) => e['id_elemento'] == idElementoSeleccionado);
+                            if (tipoSeleccionado == 'qr' &&
+                                idElementoSeleccionado != null) {
+                              final el = _elementosDisponibles.firstWhere(
+                                (e) =>
+                                    e['id_elemento'] == idElementoSeleccionado,
+                              );
                               respuestaCtrl.text = el['codigo_qr'] ?? '';
                             }
                           });
@@ -428,13 +479,17 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                       TextFormField(
                         controller: respuestaCtrl,
                         decoration: InputDecoration(
-                          labelText: tipoSeleccionado == 'qr' ? 'Código UUID del QR (Automático)' : 'Respuesta correcta',
+                          labelText: tipoSeleccionado == 'qr'
+                              ? 'Código UUID del QR (Automático)'
+                              : 'Respuesta correcta',
                           labelStyle: const TextStyle(color: Colors.grey),
                         ),
                         style: const TextStyle(color: Colors.white),
                         readOnly: tipoSeleccionado == 'qr',
                         validator: (value) =>
-                            value == null || value.trim().isEmpty ? 'La respuesta/código es obligatoria' : null,
+                            value == null || value.trim().isEmpty
+                            ? 'La respuesta/código es obligatoria'
+                            : null,
                       ),
                       TextFormField(
                         controller: puntosCtrl,
@@ -445,9 +500,16 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                         ),
                         style: const TextStyle(color: Colors.white),
                         validator: (value) {
-                          if (value == null || value.trim().isEmpty) return 'Requerido';
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Requerido';
+                          }
                           final pts = int.tryParse(value.trim());
-                          if (pts == null || pts <= 0) return 'Ingrese un puntaje mayor a 0';
+                          if (pts == null) {
+                            return 'Ingrese un número entero válido';
+                          }
+                          if (pts < 0 || pts > 100) {
+                            return 'Los puntos deben estar entre 0 y 100';
+                          }
                           return null;
                         },
                       ),
@@ -470,15 +532,34 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(dialogContext),
-                  child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+                  child: const Text(
+                    'Cancelar',
+                    style: TextStyle(color: Colors.grey),
+                  ),
                 ),
                 ElevatedButton(
                   onPressed: () async {
+                    final puntos = int.tryParse(puntosCtrl.text.trim());
+                    if (puntos != null && (puntos < 0 || puntos > 100)) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Los puntos deben estar entre 0 y 100'),
+                          backgroundColor: Colors.redAccent,
+                        ),
+                      );
+                      return;
+                    }
                     if (!formKey.currentState!.validate()) return;
 
-                    if (tipoSeleccionado == 'qr' && idElementoSeleccionado == null) {
+                    if (tipoSeleccionado == 'qr' &&
+                        idElementoSeleccionado == null) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Debe seleccionar un objeto físico para desafíos QR'), backgroundColor: Colors.red),
+                        const SnackBar(
+                          content: Text(
+                            'Debe seleccionar un objeto físico para desafíos QR',
+                          ),
+                          backgroundColor: Colors.red,
+                        ),
                       );
                       return;
                     }
@@ -516,11 +597,19 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                             });
                           }
                         } else if (idPistaExistente != null) {
-                          await supabase.from('pista').delete().eq('id_pista', idPistaExistente);
+                          await supabase
+                              .from('pista')
+                              .delete()
+                              .eq('id_pista', idPistaExistente);
                         }
                       } else {
-                        datosDesafio['id_experiencia'] = widget.experiencia['id_experiencia'];
-                        final nuevo = await supabase.from('desafio').insert(datosDesafio).select().single();
+                        datosDesafio['id_experiencia'] =
+                            widget.experiencia['id_experiencia'];
+                        final nuevo = await supabase
+                            .from('desafio')
+                            .insert(datosDesafio)
+                            .select()
+                            .single();
 
                         if (pistaCtrl.text.trim().isNotEmpty) {
                           await supabase.from('pista').insert({
@@ -535,7 +624,9 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
                       if (!mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('No se pudo guardar el desafío. Intenta nuevamente.'),
+                          content: Text(
+                            'No se pudo guardar el desafío. Intenta nuevamente.',
+                          ),
                           backgroundColor: Colors.redAccent,
                         ),
                       );
@@ -573,78 +664,107 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
         backgroundColor: Colors.amberAccent,
         foregroundColor: Colors.black,
         icon: const Icon(Icons.add),
-        label: const Text('NUEVO DESAFÍO', style: TextStyle(fontWeight: FontWeight.bold)),
+        label: const Text(
+          'NUEVO DESAFÍO',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Colors.amberAccent))
+          ? const Center(
+              child: CircularProgressIndicator(color: Colors.amberAccent),
+            )
           : _desafios.isEmpty
-              ? const Center(
-                  child: Text('No hay desafíos configurados aún.', style: TextStyle(color: Colors.grey)),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _desafios.length,
-                  itemBuilder: (context, index) {
-                    final des = _desafios[index];
-                    return Card(
-                      color: const Color(0xFF1A1A1A),
-                      shape: RoundedRectangleBorder(
-                        side: const BorderSide(color: Colors.amberAccent, width: 0.5),
-                        borderRadius: BorderRadius.circular(8),
+          ? const Center(
+              child: Text(
+                'No hay desafíos configurados aún.',
+                style: TextStyle(color: Colors.grey),
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _desafios.length,
+              itemBuilder: (context, index) {
+                final des = _desafios[index];
+                return Card(
+                  color: const Color(0xFF1A1A1A),
+                  shape: RoundedRectangleBorder(
+                    side: const BorderSide(
+                      color: Colors.amberAccent,
+                      width: 0.5,
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: Colors.amberAccent,
+                      foregroundColor: Colors.black,
+                      child: Text(des['orden_resolucion'].toString()),
+                    ),
+                    title: Text(
+                      des['descripcion'] ?? 'Sin descripción',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
                       ),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: Colors.amberAccent,
-                          foregroundColor: Colors.black,
-                          child: Text(des['orden_resolucion'].toString()),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 4),
+                        Text(
+                          'Tipo: ${des['tipo'].toString().toUpperCase()} | Pts: ${des['puntos_otorgados']}',
+                          style: const TextStyle(color: Colors.grey),
                         ),
-                        title: Text(
-                          des['descripcion'] ?? 'Sin descripción',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 4),
-                            Text(
-                              'Tipo: ${des['tipo'].toString().toUpperCase()} | Pts: ${des['puntos_otorgados']}',
-                              style: const TextStyle(color: Colors.grey),
-                            ),
-                            if (des['elemento_fisico'] != null)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 4),
-                                child: Text(
-                                  '📌 Objeto: ${des['elemento_fisico']['nombre']}',
-                                  style: const TextStyle(color: Colors.greenAccent, fontSize: 12),
-                                ),
+                        if (des['elemento_fisico'] != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              '📌 Objeto: ${des['elemento_fisico']['nombre']}',
+                              style: const TextStyle(
+                                color: Colors.greenAccent,
+                                fontSize: 12,
                               ),
-                            if (des['pista'] != null && (des['pista'] as List).isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 4),
-                                child: Text(
-                                  'Pista: ${(des['pista'] as List)[0]['texto_ayuda']}',
-                                  style: const TextStyle(color: Colors.cyan, fontStyle: FontStyle.italic),
-                                ),
+                            ),
+                          ),
+                        if (des['pista'] != null &&
+                            (des['pista'] as List).isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              'Pista: ${(des['pista'] as List)[0]['texto_ayuda']}',
+                              style: const TextStyle(
+                                color: Colors.cyan,
+                                fontStyle: FontStyle.italic,
                               ),
-                          ],
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.edit, color: Colors.cyan),
-                              onPressed: () => _mostrarModalDesafio(desafioAEditar: des),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                              onPressed: () => _eliminarDesafio(des['id_desafio']),
-                            ),
-                          ],
+                          ),
+                      ],
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit, color: Colors.cyan),
+                          onPressed: () =>
+                              _mostrarModalDesafio(desafioAEditar: des),
                         ),
-                      ),
-                    );
-                  },
-                ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: Colors.redAccent,
+                          ),
+                          onPressed: () => _eliminarDesafio(des['id_desafio']),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
     );
   }
 
@@ -653,7 +773,10 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('¿Eliminar desafío?', style: TextStyle(color: Colors.redAccent)),
+        title: const Text(
+          '¿Eliminar desafío?',
+          style: TextStyle(color: Colors.redAccent),
+        ),
         content: const Text(
           'Se eliminará este acertijo y su pista asociada de forma permanente.',
           style: TextStyle(color: Colors.white),
@@ -664,7 +787,10 @@ class _PantallaAdminDesafiosState extends State<PantallaAdminDesafios> {
             child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Eliminar'),
           ),

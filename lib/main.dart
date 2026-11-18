@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:stand_eventos/screens/landing_screen.dart';
 
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Supabase.initialize(
-    url: 'https://nizeabxzqytvqfvyftci.supabase.co', 
+    url: 'https://nizeabxzqytvqfvyftci.supabase.co',
     publishableKey: 'sb_publishable_z6cv9LwdC_Pd40x0N562nA_jzBAEtts',
   );
   runApp(const StandEventosApp());
@@ -27,10 +26,8 @@ class StandEventosApp extends StatelessWidget {
           primary: Colors.cyanAccent,
           secondary: Colors.cyan,
         ),
-        fontFamily: 'Courier',
       ),
       home: const LandingScreen(),
     );
   }
 }
-

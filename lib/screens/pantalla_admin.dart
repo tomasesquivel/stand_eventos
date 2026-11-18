@@ -4,6 +4,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+
 import 'landing_screen.dart';
 import 'pantalla_admin_desafios.dart';
 import 'pantalla_elementos_fisicos.dart';
@@ -37,7 +38,9 @@ class _PantallaAdminState extends State<PantallaAdmin> {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('La sesión de administrador expiró. Inicia sesión nuevamente.'),
+            content: Text(
+              'La sesión de administrador expiró. Inicia sesión nuevamente.',
+            ),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -73,7 +76,9 @@ class _PantallaAdminState extends State<PantallaAdmin> {
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('No se pudieron cargar los datos del stand. Verifica tu conexión.'),
+          content: Text(
+            'No se pudieron cargar los datos del stand. Verifica tu conexión.',
+          ),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -92,7 +97,9 @@ class _PantallaAdminState extends State<PantallaAdmin> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            nuevoEstado ? 'STAND ABIERTO AL PÚBLICO' : 'STAND BLOQUEADO TEMPORALMENTE',
+            nuevoEstado
+                ? 'STAND ABIERTO AL PÚBLICO'
+                : 'STAND BLOQUEADO TEMPORALMENTE',
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           backgroundColor: nuevoEstado ? Colors.green : Colors.redAccent,
@@ -110,7 +117,10 @@ class _PantallaAdminState extends State<PantallaAdmin> {
     }
   }
 
-  Future<void> _toggleActivacionExperiencia(String idExperiencia, bool nuevoEstado) async {
+  Future<void> _toggleActivacionExperiencia(
+    String idExperiencia,
+    bool nuevoEstado,
+  ) async {
     try {
       await supabase
           .from('experiencia')
@@ -129,7 +139,11 @@ class _PantallaAdminState extends State<PantallaAdmin> {
     }
   }
 
-  Future<void> _generarYDescargarPDFStand(String nombreStand, String idStand, String codigoCorto) async {
+  Future<void> _generarYDescargarPDFStand(
+    String nombreStand,
+    String idStand,
+    String codigoCorto,
+  ) async {
     final doc = pw.Document();
 
     doc.addPage(
@@ -142,12 +156,18 @@ class _PantallaAdminState extends State<PantallaAdmin> {
               children: [
                 pw.Text(
                   nombreStand.toUpperCase(),
-                  style: pw.TextStyle(fontSize: 40, fontWeight: pw.FontWeight.bold),
+                  style: pw.TextStyle(
+                    fontSize: 40,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
                 ),
                 pw.SizedBox(height: 10),
                 pw.Text(
                   'PUNTO DE ENLACE DE OPERARIOS',
-                  style: const pw.TextStyle(fontSize: 16, color: PdfColors.grey700),
+                  style: const pw.TextStyle(
+                    fontSize: 16,
+                    color: PdfColors.grey700,
+                  ),
                 ),
                 pw.SizedBox(height: 40),
                 pw.BarcodeWidget(
@@ -159,12 +179,18 @@ class _PantallaAdminState extends State<PantallaAdmin> {
                 pw.SizedBox(height: 40),
                 pw.Text(
                   '¿TU CÁMARA NO FUNCIONA?',
-                  style: const pw.TextStyle(fontSize: 20, color: PdfColors.grey700),
+                  style: const pw.TextStyle(
+                    fontSize: 20,
+                    color: PdfColors.grey700,
+                  ),
                 ),
                 pw.SizedBox(height: 10),
                 pw.Text(
                   'INGRESA EL CÓDIGO: $codigoCorto',
-                  style: pw.TextStyle(fontSize: 28, fontWeight: pw.FontWeight.bold),
+                  style: pw.TextStyle(
+                    fontSize: 28,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
                 ),
               ],
             ),
@@ -203,10 +229,18 @@ class _PantallaAdminState extends State<PantallaAdmin> {
                 children: [
                   const Text(
                     'QR MAESTRO',
-                    style: TextStyle(color: Colors.cyanAccent, fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 2),
+                    style: TextStyle(
+                      color: Colors.cyanAccent,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2,
+                    ),
                   ),
                   const SizedBox(height: 8),
-                  Text(nombre.toUpperCase(), style: const TextStyle(color: Colors.white)),
+                  Text(
+                    nombre.toUpperCase(),
+                    style: const TextStyle(color: Colors.white),
+                  ),
                   const SizedBox(height: 24),
                   Container(
                     color: Colors.white,
@@ -221,7 +255,12 @@ class _PantallaAdminState extends State<PantallaAdmin> {
                   const SizedBox(height: 20),
                   Text(
                     'CÓDIGO MANUAL: $codigoCorto',
-                    style: const TextStyle(color: Colors.amberAccent, fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 2),
+                    style: const TextStyle(
+                      color: Colors.amberAccent,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2,
+                    ),
                   ),
                   const SizedBox(height: 24),
                   SizedBox(
@@ -229,10 +268,17 @@ class _PantallaAdminState extends State<PantallaAdmin> {
                     child: ElevatedButton.icon(
                       onPressed: () {
                         Navigator.pop(dialogContext);
-                        _generarYDescargarPDFStand(nombre, idStand, codigoCorto);
+                        _generarYDescargarPDFStand(
+                          nombre,
+                          idStand,
+                          codigoCorto,
+                        );
                       },
                       icon: const Icon(Icons.picture_as_pdf),
-                      label: const Text('DESCARGAR CARTEL', style: TextStyle(fontWeight: FontWeight.bold)),
+                      label: const Text(
+                        'DESCARGAR CARTEL',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.cyan,
                         foregroundColor: Colors.black,
@@ -255,10 +301,22 @@ class _PantallaAdminState extends State<PantallaAdmin> {
     final formKey = GlobalKey<FormState>();
     final bool esEdicion = experienciaAEditar != null;
 
-    final nombreCtrl = TextEditingController(text: esEdicion ? experienciaAEditar['nombre'] : '');
-    final descCtrl = TextEditingController(text: esEdicion ? experienciaAEditar['descripcion'] : '');
-    final tiempoCtrl = TextEditingController(text: esEdicion ? experienciaAEditar['tiempo_limite_minutos'].toString() : '');
-    final recompensaCtrl = TextEditingController(text: esEdicion ? (experienciaAEditar['mensaje_recompensa_final'] ?? '') : '');
+    final nombreCtrl = TextEditingController(
+      text: esEdicion ? experienciaAEditar['nombre'] : '',
+    );
+    final descCtrl = TextEditingController(
+      text: esEdicion ? experienciaAEditar['descripcion'] : '',
+    );
+    final tiempoCtrl = TextEditingController(
+      text: esEdicion
+          ? experienciaAEditar['tiempo_limite_minutos'].toString()
+          : '',
+    );
+    final recompensaCtrl = TextEditingController(
+      text: esEdicion
+          ? (experienciaAEditar['mensaje_recompensa_final'] ?? '')
+          : '',
+    );
     bool experienciaActiva = esEdicion ? experienciaAEditar['activa'] : true;
 
     showDialog(
@@ -285,7 +343,10 @@ class _PantallaAdminState extends State<PantallaAdmin> {
                           labelStyle: TextStyle(color: Colors.grey),
                         ),
                         style: const TextStyle(color: Colors.white),
-                        validator: (value) => value == null || value.trim().isEmpty ? 'Requerido' : null,
+                        validator: (value) =>
+                            value == null || value.trim().isEmpty
+                            ? 'Requerido'
+                            : null,
                       ),
                       TextFormField(
                         controller: descCtrl,
@@ -294,7 +355,10 @@ class _PantallaAdminState extends State<PantallaAdmin> {
                           labelStyle: TextStyle(color: Colors.grey),
                         ),
                         style: const TextStyle(color: Colors.white),
-                        validator: (value) => value == null || value.trim().isEmpty ? 'Requerido' : null,
+                        validator: (value) =>
+                            value == null || value.trim().isEmpty
+                            ? 'Requerido'
+                            : null,
                       ),
                       TextFormField(
                         controller: tiempoCtrl,
@@ -305,9 +369,13 @@ class _PantallaAdminState extends State<PantallaAdmin> {
                         ),
                         style: const TextStyle(color: Colors.white),
                         validator: (value) {
-                          if (value == null || value.trim().isEmpty) return 'Requerido';
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Requerido';
+                          }
                           final num = int.tryParse(value);
-                          if (num == null || num < 1) return 'Ingresa un número mayor a 0';
+                          if (num == null || num < 1) {
+                            return 'Ingresa un número mayor a 0';
+                          }
                           return null;
                         },
                       ),
@@ -318,13 +386,21 @@ class _PantallaAdminState extends State<PantallaAdmin> {
                           labelStyle: TextStyle(color: Colors.grey),
                         ),
                         style: const TextStyle(color: Colors.white),
+                        validator: (value) =>
+                            value == null || value.trim().isEmpty
+                            ? 'Requerido'
+                            : null,
                       ),
                       const SizedBox(height: 15),
                       SwitchListTile(
-                        title: const Text('Activa', style: TextStyle(color: Colors.white)),
+                        title: const Text(
+                          'Activa',
+                          style: TextStyle(color: Colors.white),
+                        ),
                         activeThumbColor: Colors.cyan,
                         value: experienciaActiva,
-                        onChanged: (val) => setStateModal(() => experienciaActiva = val),
+                        onChanged: (val) =>
+                            setStateModal(() => experienciaActiva = val),
                       ),
                     ],
                   ),
@@ -333,7 +409,10 @@ class _PantallaAdminState extends State<PantallaAdmin> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(dialogContext),
-                  child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+                  child: const Text(
+                    'Cancelar',
+                    style: TextStyle(color: Colors.grey),
+                  ),
                 ),
                 ElevatedButton(
                   onPressed: () async {
@@ -346,7 +425,9 @@ class _PantallaAdminState extends State<PantallaAdmin> {
                         'id_stand': _standActual!['id_stand'],
                         'nombre': nombreCtrl.text.trim(),
                         'descripcion': descCtrl.text.trim(),
-                        'tiempo_limite_minutos': int.parse(tiempoCtrl.text.trim()),
+                        'tiempo_limite_minutos': int.parse(
+                          tiempoCtrl.text.trim(),
+                        ),
                         'mensaje_recompensa_final': recompensaCtrl.text.trim(),
                         'activa': experienciaActiva,
                       };
@@ -355,7 +436,10 @@ class _PantallaAdminState extends State<PantallaAdmin> {
                         await supabase
                             .from('experiencia')
                             .update(datos)
-                            .eq('id_experiencia', experienciaAEditar['id_experiencia']);
+                            .eq(
+                              'id_experiencia',
+                              experienciaAEditar['id_experiencia'],
+                            );
                       } else {
                         await supabase.from('experiencia').insert(datos);
                       }
@@ -365,14 +449,19 @@ class _PantallaAdminState extends State<PantallaAdmin> {
                       if (!mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('No se pudo guardar la experiencia. Intenta nuevamente.'),
+                          content: Text(
+                            'No se pudo guardar la experiencia. Intenta nuevamente.',
+                          ),
                           backgroundColor: Colors.redAccent,
                         ),
                       );
                       setState(() => _isLoading = false);
                     }
                   },
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.cyan, foregroundColor: Colors.black),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.cyan,
+                    foregroundColor: Colors.black,
+                  ),
                   child: Text(esEdicion ? 'Actualizar' : 'Guardar'),
                 ),
               ],
@@ -383,12 +472,18 @@ class _PantallaAdminState extends State<PantallaAdmin> {
     );
   }
 
-  Future<void> _eliminarExperiencia(String idExperiencia, String nombreExp) async {
+  Future<void> _eliminarExperiencia(
+    String idExperiencia,
+    String nombreExp,
+  ) async {
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('¿Eliminar Experiencia?', style: TextStyle(color: Colors.redAccent)),
+        title: const Text(
+          '¿Eliminar Experiencia?',
+          style: TextStyle(color: Colors.redAccent),
+        ),
         content: Text(
           'Se eliminará "$nombreExp" de forma permanente junto con sus desafíos.',
           style: const TextStyle(color: Colors.white70),
@@ -401,7 +496,10 @@ class _PantallaAdminState extends State<PantallaAdmin> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Eliminar', style: TextStyle(color: Colors.white)),
+            child: const Text(
+              'Eliminar',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -410,7 +508,10 @@ class _PantallaAdminState extends State<PantallaAdmin> {
     if (confirmar != true) return;
     setState(() => _isLoading = true);
     try {
-      await supabase.from('experiencia').delete().eq('id_experiencia', idExperiencia);
+      await supabase
+          .from('experiencia')
+          .delete()
+          .eq('id_experiencia', idExperiencia);
       await _cargarDatosCompletos();
     } catch (e) {
       debugPrint('Error al eliminar experiencia: $e');
@@ -441,7 +542,11 @@ class _PantallaAdminState extends State<PantallaAdmin> {
       appBar: AppBar(
         title: const Text(
           'SISTEMA CENTRAL',
-          style: TextStyle(color: Colors.cyanAccent, fontSize: 16, letterSpacing: 1.5),
+          style: TextStyle(
+            color: Colors.cyanAccent,
+            fontSize: 16,
+            letterSpacing: 1.5,
+          ),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -460,264 +565,375 @@ class _PantallaAdminState extends State<PantallaAdmin> {
               backgroundColor: Colors.cyan,
               foregroundColor: Colors.black,
               icon: const Icon(Icons.add),
-              label: const Text('NUEVA EXPERIENCIA', style: TextStyle(fontWeight: FontWeight.bold)),
+              label: const Text(
+                'NUEVA EXPERIENCIA',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: Colors.cyan))
           : _standActual == null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.warning_amber_rounded, color: Colors.amberAccent, size: 60),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'NO TIENES UN STAND ASIGNADO',
-                        style: TextStyle(color: Colors.amberAccent, fontSize: 16, fontWeight: FontWeight.bold),
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.warning_amber_rounded,
+                    color: Colors.amberAccent,
+                    size: 60,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'NO TIENES UN STAND ASIGNADO',
+                    style: TextStyle(
+                      color: Colors.amberAccent,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: _cerrarSesion,
+                    child: const Text('Volver'),
+                  ),
+                ],
+              ),
+            )
+          : Column(
+              children: [
+                Container(
+                  margin: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1A1A1A),
+                    border: Border.all(
+                      color: _standActual!['activo']
+                          ? Colors.greenAccent
+                          : Colors.redAccent,
+                      width: 2,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color:
+                            (_standActual!['activo']
+                                    ? Colors.greenAccent
+                                    : Colors.redAccent)
+                                .withAlpha(20),
+                        blurRadius: 15,
+                        spreadRadius: 1,
                       ),
-                      const SizedBox(height: 24),
-                      ElevatedButton(onPressed: _cerrarSesion, child: const Text('Volver')),
                     ],
                   ),
-                )
-              : Column(
-                  children: [
-                    Container(
-                      margin: const EdgeInsets.all(16),
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1A1A1A),
-                        border: Border.all(
-                          color: _standActual!['activo'] ? Colors.greenAccent : Colors.redAccent,
-                          width: 2,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: (_standActual!['activo'] ? Colors.greenAccent : Colors.redAccent).withAlpha(20),
-                            blurRadius: 15,
-                            spreadRadius: 1,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _standActual!['nombre_marca']
+                                      .toString()
+                                      .toUpperCase(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 2,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _standActual!['activo']
+                                      ? 'ESTADO: ABIERTO'
+                                      : 'ESTADO: BLOQUEADO',
+                                  style: TextStyle(
+                                    color: _standActual!['activo']
+                                        ? Colors.greenAccent
+                                        : Colors.redAccent,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Semantics(
+                            label: 'Interruptor para abrir o bloquear el stand al público',
+                            child: Switch(
+                              activeThumbColor: Colors.greenAccent,
+                              inactiveThumbColor: Colors.redAccent,
+                              inactiveTrackColor: Colors.redAccent.withAlpha(
+                                50,
+                              ),
+                              value: _standActual!['activo'],
+                              onChanged: _toggleEstadoStand,
+                            ),
                           ),
                         ],
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      const SizedBox(height: 12),
+                      Wrap(
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 12,
+                        runSpacing: 8,
                         children: [
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Expanded(
+                              const Icon(
+                                Icons.vpn_key,
+                                color: Colors.amberAccent,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'CÓDIGO: ${_standActual!['codigo_corto']}',
+                                style: const TextStyle(
+                                  color: Colors.amberAccent,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 2,
+                                ),
+                              ),
+                            ],
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: _mostrarDialogoQRStand,
+                            icon: const Icon(Icons.qr_code_2, size: 18),
+                            label: const Text(
+                              'VER QR',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.cyanAccent,
+                              side: const BorderSide(color: Colors.cyanAccent),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'EXPERIENCIAS DEL STAND',
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                  ),
+                ),
+
+                Expanded(
+                  child: _experiencias.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'No hay experiencias configuradas.',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.only(
+                            left: 16,
+                            right: 16,
+                            top: 8,
+                            bottom: 88,
+                          ),
+                          itemCount: _experiencias.length,
+                          itemBuilder: (context, index) {
+                            final exp = _experiencias[index];
+                            final String nombreExp =
+                                exp['nombre']?.toString() ?? 'Experiencia';
+
+                            return Card(
+                              color: const Color(0xFF1A1A1A),
+                              shape: RoundedRectangleBorder(
+                                side: const BorderSide(
+                                  color: Colors.cyan,
+                                  width: 0.5,
+                                ),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              margin: const EdgeInsets.only(bottom: 12),
+                              child: Padding(
+                                padding: const EdgeInsets.all(12.0),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      _standActual!['nombre_marca'].toString().toUpperCase(),
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 2,
-                                      ),
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                nombreExp.toUpperCase(),
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                'Tiempo: ${exp['tiempo_limite_minutos']} min | Estado: ${exp['activa'] ? 'Activa' : 'Pausada'}',
+                                                style: const TextStyle(
+                                                  color: Colors.grey,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Semantics(
+                                          label:
+                                              'Activar o pausar experiencia $nombreExp',
+                                          child: Switch(
+                                            activeThumbColor: Colors.cyan,
+                                            value: exp['activa'],
+                                            onChanged: (bool val) =>
+                                                _toggleActivacionExperiencia(
+                                                  exp['id_experiencia'],
+                                                  val,
+                                                ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      _standActual!['activo'] ? 'ESTADO: ABIERTO' : 'ESTADO: BLOQUEADO',
-                                      style: TextStyle(
-                                        color: _standActual!['activo'] ? Colors.greenAccent : Colors.redAccent,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                    const Divider(
+                                      color: Colors.white24,
+                                      height: 20,
+                                    ),
+
+                                    // CORRECCIÓN USABILIDAD #8: Acción destructiva separada a la izquierda y tooltips en íconos
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        IconButton(
+                                          tooltip:
+                                              'Eliminar experiencia $nombreExp',
+                                          icon: const Icon(
+                                            Icons.delete_outline,
+                                            color: Colors.redAccent,
+                                          ),
+                                          onPressed: () => _eliminarExperiencia(
+                                            exp['id_experiencia'],
+                                            nombreExp,
+                                          ),
+                                        ),
+                                        Expanded(
+                                          child: Wrap(
+                                            alignment: WrapAlignment.end,
+                                            crossAxisAlignment:
+                                                WrapCrossAlignment.center,
+                                            spacing: 4,
+                                            children: [
+                                              TextButton(
+                                                onPressed: () =>
+                                                    _mostrarModalFormulario(
+                                                      experienciaAEditar: exp,
+                                                    ),
+                                                style: TextButton.styleFrom(
+                                                  foregroundColor: Colors.cyan,
+                                                ),
+                                                child: const Text(
+                                                  'EDITAR',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                              TextButton(
+                                                onPressed: () => Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (context) =>
+                                                        PantallaAdminDesafios(
+                                                          experiencia: exp,
+                                                        ),
+                                                  ),
+                                                ),
+                                                style: TextButton.styleFrom(
+                                                  foregroundColor:
+                                                      Colors.amberAccent,
+                                                ),
+                                                child: const Text(
+                                                  'DESAFÍOS',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                              TextButton(
+                                                onPressed: () => Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (context) =>
+                                                        PantallaElementosFisicos(
+                                                          experiencia: exp,
+                                                        ),
+                                                  ),
+                                                ),
+                                                style: TextButton.styleFrom(
+                                                  foregroundColor:
+                                                      Colors.greenAccent,
+                                                ),
+                                                child: const Text(
+                                                  'OBJETOS',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                              IconButton(
+                                                tooltip: 'Ver hoja de armado del stand',
+                                                icon: const Icon(
+                                                  Icons.list_alt,
+                                                  color: Colors.purpleAccent,
+                                                ),
+                                                onPressed: () => Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (context) =>
+                                                        PantallaAdminHojaArmado(
+                                                          experiencia: exp,
+                                                        ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
                               ),
-                              Semantics(
-                                label: 'Interruptor para abrir o bloquear el stand al público',
-                                child: Switch(
-                                  activeThumbColor: Colors.greenAccent,
-                                  inactiveThumbColor: Colors.redAccent,
-                                  inactiveTrackColor: Colors.redAccent.withAlpha(50),
-                                  value: _standActual!['activo'],
-                                  onChanged: _toggleEstadoStand,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Wrap(
-                            alignment: WrapAlignment.spaceBetween,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            spacing: 12,
-                            runSpacing: 8,
-                            children: [
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.vpn_key, color: Colors.amberAccent, size: 16),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'CÓDIGO: ${_standActual!['codigo_corto']}',
-                                    style: const TextStyle(
-                                      color: Colors.amberAccent,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 2,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              OutlinedButton.icon(
-                                onPressed: _mostrarDialogoQRStand,
-                                icon: const Icon(Icons.qr_code_2, size: 18),
-                                label: const Text('VER QR', style: TextStyle(fontWeight: FontWeight.bold)),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.cyanAccent,
-                                  side: const BorderSide(color: Colors.cyanAccent),
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'EXPERIENCIAS DEL STAND',
-                          style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, letterSpacing: 1.5),
+                            );
+                          },
                         ),
-                      ),
-                    ),
-
-                    Expanded(
-                      child: _experiencias.isEmpty
-                          ? const Center(
-                              child: Text('No hay experiencias configuradas.', style: TextStyle(color: Colors.grey)),
-                            )
-                          : ListView.builder(
-                              padding: const EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 88),
-                              itemCount: _experiencias.length,
-                              itemBuilder: (context, index) {
-                                final exp = _experiencias[index];
-                                final String nombreExp = exp['nombre']?.toString() ?? 'Experiencia';
-
-                                return Card(
-                                  color: const Color(0xFF1A1A1A),
-                                  shape: RoundedRectangleBorder(
-                                    side: const BorderSide(color: Colors.cyan, width: 0.5),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  margin: const EdgeInsets.only(bottom: 12),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(12.0),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    nombreExp.toUpperCase(),
-                                                    style: const TextStyle(
-                                                      color: Colors.white,
-                                                      fontWeight: FontWeight.bold,
-                                                      fontSize: 16,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 4),
-                                                  Text(
-                                                    'Tiempo: ${exp['tiempo_limite_minutos']} min | Estado: ${exp['activa'] ? 'Activa' : 'Pausada'}',
-                                                    style: const TextStyle(color: Colors.grey),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            Semantics(
-                                              label: 'Activar o pausar experiencia $nombreExp',
-                                              child: Switch(
-                                                activeThumbColor: Colors.cyan,
-                                                value: exp['activa'],
-                                                onChanged: (bool val) =>
-                                                    _toggleActivacionExperiencia(exp['id_experiencia'], val),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const Divider(color: Colors.white24, height: 20),
-
-                                        // CORRECCIÓN USABILIDAD #8: Acción destructiva separada a la izquierda y tooltips en íconos
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            IconButton(
-                                              tooltip: 'Eliminar experiencia $nombreExp',
-                                              icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                                              onPressed: () =>
-                                                  _eliminarExperiencia(exp['id_experiencia'], nombreExp),
-                                            ),
-                                            Expanded(
-                                              child: Wrap(
-                                                alignment: WrapAlignment.end,
-                                                crossAxisAlignment: WrapCrossAlignment.center,
-                                                spacing: 4,
-                                                children: [
-                                                  TextButton(
-                                                    onPressed: () => _mostrarModalFormulario(experienciaAEditar: exp),
-                                                    style: TextButton.styleFrom(foregroundColor: Colors.cyan),
-                                                    child: const Text('EDITAR', style: TextStyle(fontWeight: FontWeight.bold)),
-                                                  ),
-                                                  TextButton(
-                                                    onPressed: () => Navigator.push(
-                                                      context,
-                                                      MaterialPageRoute(
-                                                        builder: (context) => PantallaAdminDesafios(experiencia: exp),
-                                                      ),
-                                                    ),
-                                                    style: TextButton.styleFrom(foregroundColor: Colors.amberAccent),
-                                                    child: const Text('DESAFÍOS', style: TextStyle(fontWeight: FontWeight.bold)),
-                                                  ),
-                                                  TextButton(
-                                                    onPressed: () => Navigator.push(
-                                                      context,
-                                                      MaterialPageRoute(
-                                                        builder: (context) => PantallaElementosFisicos(experiencia: exp),
-                                                      ),
-                                                    ),
-                                                    style: TextButton.styleFrom(foregroundColor: Colors.greenAccent),
-                                                    child: const Text('OBJETOS', style: TextStyle(fontWeight: FontWeight.bold)),
-                                                  ),
-                                                  IconButton(
-                                                    tooltip: 'Ver hoja de armado del stand',
-                                                    icon: const Icon(Icons.list_alt, color: Colors.purpleAccent),
-                                                    onPressed: () => Navigator.push(
-                                                      context,
-                                                      MaterialPageRoute(
-                                                        builder: (context) => PantallaAdminHojaArmado(experiencia: exp),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                    ),
-                  ],
                 ),
+              ],
+            ),
     );
   }
 }
