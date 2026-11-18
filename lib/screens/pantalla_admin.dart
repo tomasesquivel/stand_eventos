@@ -827,6 +827,8 @@ class _PantallaAdminState extends State<PantallaAdmin> {
                                     Row(
                                       mainAxisAlignment:
                                           MainAxisAlignment.spaceBetween,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
                                       children: [
                                         IconButton(
                                           tooltip:
@@ -835,92 +837,106 @@ class _PantallaAdminState extends State<PantallaAdmin> {
                                             Icons.delete_outline,
                                             color: Colors.redAccent,
                                           ),
+                                          visualDensity: VisualDensity.compact,
+                                          padding: EdgeInsets.zero,
                                           onPressed: () => _eliminarExperiencia(
                                             exp['id_experiencia'],
                                             nombreExp,
                                           ),
                                         ),
-                                        Expanded(
-                                          child: Wrap(
-                                            alignment: WrapAlignment.end,
-                                            crossAxisAlignment:
-                                                WrapCrossAlignment.center,
-                                            spacing: 4,
-                                            children: [
-                                              TextButton(
-                                                onPressed: () =>
-                                                    _mostrarModalFormulario(
-                                                      experienciaAEditar: exp,
-                                                    ),
-                                                style: TextButton.styleFrom(
-                                                  foregroundColor: Colors.cyan,
-                                                ),
-                                                child: const Text(
-                                                  'EDITAR',
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
+                                        TextButton(
+                                          onPressed: () =>
+                                              _mostrarModalFormulario(
+                                                experienciaAEditar: exp,
                                               ),
-                                              TextButton(
-                                                onPressed: () => Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                    builder: (context) =>
-                                                        PantallaAdminDesafios(
-                                                          experiencia: exp,
-                                                        ),
+                                          style: TextButton.styleFrom(
+                                            foregroundColor: Colors.cyan,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 4,
+                                            ),
+                                            minimumSize: Size.zero,
+                                            tapTargetSize: MaterialTapTargetSize
+                                                .shrinkWrap,
+                                          ),
+                                          child: const Text(
+                                            'EDITAR',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                        TextButton(
+                                          onPressed: () => Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  PantallaAdminDesafios(
+                                                    experiencia: exp,
                                                   ),
-                                                ),
-                                                style: TextButton.styleFrom(
-                                                  foregroundColor:
-                                                      Colors.amberAccent,
-                                                ),
-                                                child: const Text(
-                                                  'DESAFÍOS',
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          style: TextButton.styleFrom(
+                                            foregroundColor: Colors.amberAccent,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 4,
+                                            ),
+                                            minimumSize: Size.zero,
+                                            tapTargetSize: MaterialTapTargetSize
+                                                .shrinkWrap,
+                                          ),
+                                          child: const Text(
+                                            'DESAFÍOS',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                        TextButton(
+                                          onPressed: () => Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  PantallaElementosFisicos(
+                                                    experiencia: exp,
                                                   ),
-                                                ),
-                                              ),
-                                              TextButton(
-                                                onPressed: () => Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                    builder: (context) =>
-                                                        PantallaElementosFisicos(
-                                                          experiencia: exp,
-                                                        ),
+                                            ),
+                                          ),
+                                          style: TextButton.styleFrom(
+                                            foregroundColor: Colors.greenAccent,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 4,
+                                            ),
+                                            minimumSize: Size.zero,
+                                            tapTargetSize: MaterialTapTargetSize
+                                                .shrinkWrap,
+                                          ),
+                                          child: const Text(
+                                            'OBJETOS',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                        IconButton(
+                                          tooltip:
+                                              'Ver hoja de armado del stand',
+                                          icon: const Icon(
+                                            Icons.list_alt,
+                                            color: Colors.purpleAccent,
+                                          ),
+                                          visualDensity: VisualDensity.compact,
+                                          padding: EdgeInsets.zero,
+                                          onPressed: () => Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  PantallaAdminHojaArmado(
+                                                    experiencia: exp,
                                                   ),
-                                                ),
-                                                style: TextButton.styleFrom(
-                                                  foregroundColor:
-                                                      Colors.greenAccent,
-                                                ),
-                                                child: const Text(
-                                                  'OBJETOS',
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                              ),
-                                              IconButton(
-                                                tooltip: 'Ver hoja de armado del stand',
-                                                icon: const Icon(
-                                                  Icons.list_alt,
-                                                  color: Colors.purpleAccent,
-                                                ),
-                                                onPressed: () => Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                    builder: (context) =>
-                                                        PantallaAdminHojaArmado(
-                                                          experiencia: exp,
-                                                        ),
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
+                                            ),
                                           ),
                                         ),
                                       ],
