@@ -69,8 +69,7 @@ class PantallaTiempoAgotado extends StatelessWidget {
                 height: 55,
                 child: OutlinedButton(
                   onPressed: () {
-                    // Cierra todas las pantallas apiladas y vuelve a la principal / catálogo
-                    Navigator.popUntil(context, (route) => route.isFirst);
+                    Navigator.pop(context);
                   },
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Colors.white24),

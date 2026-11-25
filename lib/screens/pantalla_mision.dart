@@ -83,7 +83,7 @@ class _PantallaMisionState extends State<PantallaMision> {
               height: 60,
               child: ElevatedButton(
                 onPressed: () {
-                  Navigator.push(
+                  Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(
                       builder: (context) => PantallaJuego(experiencia: exp),

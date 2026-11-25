@@ -3,8 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../utils/sesion_local.dart';
-import 'pantalla_juego.dart';
 import 'landing_screen.dart';
+import 'pantalla_mision.dart';
 
 class PantallaCatalogo extends StatefulWidget {
   const PantallaCatalogo({super.key});
@@ -312,7 +312,7 @@ class _PantallaCatalogoState extends State<PantallaCatalogo> {
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) =>
-                                          PantallaJuego(experiencia: exp),
+                                          PantallaMision(experiencia: exp),
                                     ),
                                   ).then((_) {
                                     setState(() {});

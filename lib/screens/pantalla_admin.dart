@@ -369,12 +369,9 @@ class _PantallaAdminState extends State<PantallaAdmin> {
                         ),
                         style: const TextStyle(color: Colors.white),
                         validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Requerido';
-                          }
-                          final num = int.tryParse(value);
-                          if (num == null || num < 1) {
-                            return 'Ingresa un número mayor a 0';
+                          final minutos = int.tryParse(value?.trim() ?? '');
+                          if (minutos == null || minutos < 3 || minutos > 7) {
+                            return 'La duración debe estar entre 3 y 7 minutos';
                           }
                           return null;
                         },
