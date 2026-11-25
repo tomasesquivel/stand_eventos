@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../utils/app_route_observer.dart';
 import '../utils/sesion_local.dart';
 import 'landing_screen.dart';
 import 'pantalla_mision.dart';
@@ -13,16 +14,41 @@ class PantallaCatalogo extends StatefulWidget {
   State<PantallaCatalogo> createState() => _PantallaCatalogoState();
 }
 
-class _PantallaCatalogoState extends State<PantallaCatalogo> {
+class _PantallaCatalogoState extends State<PantallaCatalogo> with RouteAware {
   final supabase = Supabase.instance.client;
   List<dynamic> _experiencias = [];
   bool _isLoading = true;
   String? _mensajeError;
+  ModalRoute<dynamic>? _route;
 
   @override
   void initState() {
     super.initState();
     _cargarExperienciasActivas();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null && route != _route) {
+      if (_route != null) {
+        appRouteObserver.unsubscribe(this);
+      }
+      _route = route;
+      appRouteObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void didPopNext() {
+    setState(() {});
+  }
+
+  @override
+  void dispose() {
+    appRouteObserver.unsubscribe(this);
+    super.dispose();
   }
 
   // TICKET ADM22: Carga solo las experiencias vinculadas al stand escaneado
